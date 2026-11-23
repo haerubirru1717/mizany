@@ -17,25 +17,43 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onSelectTab }) 
 
   return (
     <nav
-      className="fixed left-1/2 -translate-x-1/2 bottom-[calc(16px+env(safe-area-inset-bottom))] z-40 flex items-center gap-1.5 p-1.5 bg-white/95 backdrop-blur-[18px] border border-white/90 rounded-full shadow-floating max-w-[92vw]"
+      className="fixed left-1/2 -translate-x-1/2 bottom-[calc(16px+env(safe-area-inset-bottom))] z-40 flex items-center gap-1.5 p-1.5 bg-white/95 backdrop-blur-[20px] border border-white/90 rounded-full shadow-floating max-w-[94vw] transition-transform duration-300"
       aria-label="Navigasi utama"
     >
       {tabs.map((tab) => {
         const Icon = tab.icon
         const isActive = activeTab === tab.key
+
         return (
           <button
             key={tab.key}
             type="button"
             onClick={() => onSelectTab(tab.key)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-[13.5px] font-semibold transition-all duration-200 cursor-pointer ${
+            className={`group relative flex items-center justify-center py-2.5 px-3.5 sm:px-4 rounded-full text-[13.5px] font-semibold transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] cursor-pointer active:scale-90 select-none ${
               isActive
-                ? 'bg-[#0F50BD] text-white shadow-[0_4px_12px_rgba(15,80,189,0.32)] scale-[1.02]'
-                : 'text-[#525252] hover:text-[#101828] hover:bg-black/[0.03]'
+                ? 'bg-[#0F50BD] text-white shadow-[0_4px_16px_rgba(15,80,189,0.38)]'
+                : 'text-[#525252] hover:text-[#101828] hover:bg-black/[0.04]'
             }`}
           >
-            <Icon size={19} strokeWidth={2} />
-            {isActive && <span>{tab.label}</span>}
+            {/* Icon & Animated Label */}
+            <div className="flex items-center">
+              <Icon
+                size={19}
+                strokeWidth={isActive ? 2.4 : 1.9}
+                className={`transition-transform duration-300 ease-out ${
+                  isActive ? 'scale-105' : 'group-hover:scale-110'
+                }`}
+              />
+              <span
+                className={`transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] whitespace-nowrap overflow-hidden leading-none ${
+                  isActive
+                    ? 'max-w-[70px] opacity-100 ml-2 font-bold'
+                    : 'max-w-0 opacity-0 ml-0 pointer-events-none'
+                }`}
+              >
+                {tab.label}
+              </span>
+            </div>
           </button>
         )
       })}

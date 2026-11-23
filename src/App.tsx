@@ -161,67 +161,69 @@ export default function App() {
 
       {/* Main Container */}
       <main className="max-w-md mx-auto min-h-screen px-4 pt-2 sm:pt-4 pb-20 relative z-10">
-        {/* VIEW: BERANDA */}
-        {activeTab === 'beranda' && (
-          <div className="space-y-2">
-            <HeroPrayer
+        <div key={activeTab} className="view-enter">
+          {/* VIEW: BERANDA */}
+          {activeTab === 'beranda' && (
+            <div className="space-y-2">
+              <HeroPrayer
+                city={city}
+                hijriDate={prayerSchedule?.hijriDate}
+                gregorianDate={prayerSchedule?.gregorianDate}
+                nextPrayerName={prayerSchedule?.nextPrayer?.name}
+                nextPrayerTime={prayerSchedule?.nextPrayer?.time}
+                remainingTime={prayerSchedule?.nextPrayer?.remaining}
+                onOpenPrayerDetail={() => setActiveTab('prayer')}
+              />
+
+              <QuickActions
+                onNavigate={(tab) => setActiveTab(tab)}
+                onScrollToChecklist={() => scrollToSection('checklist-section')}
+              />
+
+              <PrayerRow
+                city={city}
+                prayers={prayerSchedule?.prayers}
+                onSelectPrayer={() => setActiveTab('prayer')}
+              />
+
+              <AmalChecklist
+                items={[...amalItems, ...customAmalItems]}
+                onToggleCheck={handleToggleCheck}
+                onIncrementCounter={handleIncrementCounter}
+                onUpdateValue={handleUpdateValue}
+                onOpenAddAmal={() => setActiveTab('atur')}
+              />
+            </div>
+          )}
+
+          {/* VIEW: QURAN */}
+          {activeTab === 'quran' && <QuranView dailyTarget={tilawahTarget} />}
+
+          {/* VIEW: TASBIH */}
+          {activeTab === 'tasbih' && <TasbihView />}
+
+          {/* VIEW: KALENDER */}
+          {activeTab === 'kalender' && <KalenderView />}
+
+          {/* VIEW: ATUR */}
+          {activeTab === 'atur' && (
+            <AturView
               city={city}
-              hijriDate={prayerSchedule?.hijriDate}
-              gregorianDate={prayerSchedule?.gregorianDate}
-              nextPrayerName={prayerSchedule?.nextPrayer?.name}
-              nextPrayerTime={prayerSchedule?.nextPrayer?.time}
-              remainingTime={prayerSchedule?.nextPrayer?.remaining}
-              onOpenPrayerDetail={() => setActiveTab('prayer')}
+              onChangeCity={handleChangeCity}
+              tilawahTarget={tilawahTarget}
+              onChangeTilawahTarget={handleChangeTilawahTarget}
+              customAmalItems={customAmalItems}
+              onAddCustomAmal={handleAddCustomAmal}
+              onDeleteCustomAmal={handleDeleteCustomAmal}
+              onReplayOnboarding={() => setShowOnboarding(true)}
             />
+          )}
 
-            <QuickActions
-              onNavigate={(tab) => setActiveTab(tab)}
-              onScrollToChecklist={() => scrollToSection('checklist-section')}
-            />
-
-            <PrayerRow
-              city={city}
-              prayers={prayerSchedule?.prayers}
-              onSelectPrayer={() => setActiveTab('prayer')}
-            />
-
-            <AmalChecklist
-              items={[...amalItems, ...customAmalItems]}
-              onToggleCheck={handleToggleCheck}
-              onIncrementCounter={handleIncrementCounter}
-              onUpdateValue={handleUpdateValue}
-              onOpenAddAmal={() => setActiveTab('atur')}
-            />
-          </div>
-        )}
-
-        {/* VIEW: QURAN */}
-        {activeTab === 'quran' && <QuranView dailyTarget={tilawahTarget} />}
-
-        {/* VIEW: TASBIH */}
-        {activeTab === 'tasbih' && <TasbihView />}
-
-        {/* VIEW: KALENDER */}
-        {activeTab === 'kalender' && <KalenderView />}
-
-        {/* VIEW: ATUR */}
-        {activeTab === 'atur' && (
-          <AturView
-            city={city}
-            onChangeCity={handleChangeCity}
-            tilawahTarget={tilawahTarget}
-            onChangeTilawahTarget={handleChangeTilawahTarget}
-            customAmalItems={customAmalItems}
-            onAddCustomAmal={handleAddCustomAmal}
-            onDeleteCustomAmal={handleDeleteCustomAmal}
-            onReplayOnboarding={() => setShowOnboarding(true)}
-          />
-        )}
-
-        {/* VIEW: PRAYER DETAIL */}
-        {activeTab === 'prayer' && (
-          <PrayerView city={city} onBack={() => setActiveTab('beranda')} />
-        )}
+          {/* VIEW: PRAYER DETAIL */}
+          {activeTab === 'prayer' && (
+            <PrayerView city={city} onBack={() => setActiveTab('beranda')} />
+          )}
+        </div>
       </main>
 
       {/* Floating Bottom Nav */}

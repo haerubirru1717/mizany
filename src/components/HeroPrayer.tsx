@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { MosqueSkyline } from './MosqueSkyline'
-import { MapPin, ChevronDown, Bell, CloudSun, ChevronRight } from 'lucide-react'
+import { MapPin, Bell, CloudSun, ChevronRight } from 'lucide-react'
 
 interface HeroPrayerProps {
   city: string
@@ -21,6 +21,16 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
   remainingTime = '02:41:09',
   onOpenPrayerDetail,
 }) => {
+  const [animatedOffset, setAnimatedOffset] = useState(384)
+
+  useEffect(() => {
+    // Animate arc sweeping from 0 to target progress smoothly
+    const timer = setTimeout(() => {
+      setAnimatedOffset(115)
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [])
+
   return (
     <div
       onClick={onOpenPrayerDetail}
@@ -80,13 +90,15 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
             strokeWidth="17"
             strokeLinecap="round"
           />
-          {/* Active progress track */}
+          {/* Active progress track with loading sweep & pulse */}
           <path
             d="M28 156 A122 122 0 0 1 272 156"
             stroke="url(#heroGrad)"
             strokeWidth="17"
             strokeLinecap="round"
-            strokeDasharray="260 400"
+            strokeDasharray="384"
+            strokeDashoffset={animatedOffset}
+            className="arc-pulse transition-all duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
           />
         </svg>
 

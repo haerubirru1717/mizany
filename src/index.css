@@ -59,3 +59,33 @@ body {
   box-shadow: 0 3px 10px rgba(25, 65, 181, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   border-radius: 14px;
 }
+
+/* Smooth view transition */
+@keyframes viewFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.view-enter {
+  animation: viewFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Subtle breathing glow on the active arc tip */
+@keyframes arcGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px rgba(20, 184, 166, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 9px rgba(20, 184, 166, 0.9));
+  }
+}
+
+.arc-pulse {
+  animation: arcGlow 2.8s ease-in-out infinite;
+}
