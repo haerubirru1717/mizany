@@ -82,11 +82,6 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
               <stop offset="55%" stopColor="#0F50BD" />
               <stop offset="100%" stopColor="#14B8A6" />
             </linearGradient>
-            <linearGradient id="arcColorWave" x1="0" y1="1" x2="1" y2="0">
-              <stop offset="0%" stopColor="#14B8A6" />
-              <stop offset="60%" stopColor="#8BA0F3" />
-              <stop offset="100%" stopColor="#8BA0F3" />
-            </linearGradient>
             <mask id="arcFillMask">
               <path
                 d="M28 156 A122 122 0 0 1 272 156"
@@ -116,22 +111,22 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
             strokeDashoffset={animatedOffset}
             className="transition-all duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
           />
-          {/* Sequential transparent (front) -> solid color (behind) glide inside active progress pipe */}
+          {/* Synchronized wipe: translucent wash leads, exact heroGrad color sweeps right behind */}
           <g mask="url(#arcFillMask)">
             <path
               d="M28 156 A122 122 0 0 1 272 156"
-              stroke="rgba(255, 255, 255, 0.32)"
+              stroke="rgba(255, 255, 255, 0.34)"
               strokeWidth="17"
               strokeLinecap="round"
-              strokeDasharray="64 520"
+              strokeDasharray="384"
               className="arc-wave-transparent"
             />
             <path
               d="M28 156 A122 122 0 0 1 272 156"
-              stroke="url(#arcColorWave)"
-              strokeWidth="17"
+              stroke="url(#heroGrad)"
+              strokeWidth="17.6"
               strokeLinecap="round"
-              strokeDasharray="64 520"
+              strokeDasharray="384"
               className="arc-wave-color"
             />
           </g>

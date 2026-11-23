@@ -76,36 +76,65 @@ body {
   animation: viewFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Sequential 2-segment glide inside the filled arc: transparent front -> color behind */
-@keyframes arcSegmentGlide {
+/* Synchronized dual-wipe inside filled arc: translucent wash leads, exact base color sweeps right behind */
+@keyframes arcWipeTransparent {
   0% {
-    stroke-dashoffset: 84;
-    opacity: 0;
-  }
-  4% {
+    stroke-dashoffset: 384;
     opacity: 1;
   }
-  44% {
+  42% {
+    stroke-dashoffset: 0;
     opacity: 1;
   }
-  48% {
-    stroke-dashoffset: -384;
+  56% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  58% {
+    stroke-dashoffset: 0;
     opacity: 0;
   }
   100% {
-    stroke-dashoffset: -384;
+    stroke-dashoffset: 384;
+    opacity: 0;
+  }
+}
+
+@keyframes arcWipeColor {
+  0% {
+    stroke-dashoffset: 384;
+    opacity: 1;
+  }
+  10% {
+    stroke-dashoffset: 384;
+    opacity: 1;
+  }
+  54% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  60% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  62% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+  100% {
+    stroke-dashoffset: 384;
     opacity: 0;
   }
 }
 
 .arc-wave-transparent {
-  opacity: 0;
-  animation: arcSegmentGlide 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  animation-delay: 0.4s;
+  stroke-dashoffset: 384;
+  animation: arcWipeTransparent 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: 1.4s;
 }
 
 .arc-wave-color {
-  opacity: 0;
-  animation: arcSegmentGlide 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  animation-delay: 0.78s;
+  stroke-dashoffset: 384;
+  animation: arcWipeColor 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: 1.4s;
 }
