@@ -29,23 +29,14 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
       className="relative overflow-hidden -mx-4 -mt-2 sm:-mx-6 sm:-mt-4 bg-[#1941B5] text-white pt-[calc(18px+env(safe-area-inset-top))] px-5 pb-5 rounded-b-[26px] cursor-pointer shadow-[0_8px_24px_rgba(25,65,181,0.2)] transition-transform active:scale-[0.99]"
       aria-label="Hitung mundur sholat berikutnya — ketuk untuk detail Prayer Time"
     >
-      {/* Top row: Date & City & Notification */}
+      {/* Top row: Date & Notification */}
       <div className="flex items-start justify-between relative z-10">
         <div>
-          <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
-            <span className="font-bold text-white text-[14.5px] leading-tight">
-              {hijriDate}
-            </span>
-            <span className="hidden sm:inline text-[#8BA0F3] text-xs font-semibold">•</span>
-            <span className="text-white/80 text-[12px] font-medium leading-tight">
-              {gregorianDate}
-            </span>
+          <div className="text-[14.5px] font-bold text-white leading-tight">
+            {hijriDate}
           </div>
-
-          <div className="flex items-center gap-1.5 text-white font-bold text-base mt-1">
-            <MapPin size={16} className="text-[#8BA0F3] shrink-0" />
-            <span>{city}</span>
-            <ChevronDown size={14} className="text-[#8BA0F3]" />
+          <div className="text-[12px] font-medium text-white/80 leading-tight mt-0.5">
+            {gregorianDate}
           </div>
         </div>
 
@@ -54,11 +45,11 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
           onClick={(e) => {
             e.stopPropagation()
           }}
-          className="w-11 h-11 shrink-0 rounded-xl bg-white/20 border border-white/40 backdrop-blur-md flex items-center justify-center relative shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]"
+          className="w-10 h-10 shrink-0 rounded-xl bg-white/20 border border-white/40 backdrop-blur-md flex items-center justify-center relative shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] hover:bg-white/30 transition-colors"
           aria-label="Notifikasi"
         >
-          <Bell size={19} className="text-white" />
-          <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-red-500" />
+          <Bell size={18} className="text-white" />
+          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500 ring-2 ring-[#1941B5]" />
         </button>
       </div>
 
@@ -100,9 +91,18 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
           <div className="text-xs sm:text-sm font-medium text-white/80 mt-0.5">
             Sisa waktu · pukul <span className="font-semibold">{nextPrayerTime}</span>
           </div>
-          <span className="inline-block mt-2 px-3 py-1 bg-white/20 border border-white/30 backdrop-blur-md rounded-full text-xs font-bold tracking-wider">
+          <span className="inline-block mt-2 px-3.5 py-1 bg-white/20 border border-white/30 backdrop-blur-md rounded-full text-xs font-bold tracking-wider">
             {remainingTime}
           </span>
+        </div>
+      </div>
+
+      {/* Location Badge under Countdown Timer */}
+      <div className="relative z-10 mt-3 flex justify-center">
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/15 border border-white/25 backdrop-blur-md text-xs font-semibold text-white shadow-sm hover:bg-white/20 transition-colors">
+          <MapPin size={13} className="text-[#8BA0F3] shrink-0" />
+          <span>{city}</span>
+          <ChevronDown size={13} className="text-[#8BA0F3]" />
         </div>
       </div>
 
