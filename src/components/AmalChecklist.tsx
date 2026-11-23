@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { AmalItem, MandatoryPrayerKey } from '../types'
 import {
   Check,
@@ -32,6 +32,19 @@ const MANDATORY_PRAYERS: { key: MandatoryPrayerKey; label: string }[] = [
   { key: 'maghrib', label: 'Maghrib' },
   { key: 'isya', label: 'Isya' },
 ]
+
+function getTargetStepChips(target: number, unit?: string): number[] {
+  const u = (unit || '').toLowerCase()
+  if (u.includes('rakaat')) {
+    const steps = [2, 4].filter((s) => s < target)
+    return steps.length > 0 ? steps : [1]
+  }
+  if (target <= 5) return [1]
+  if (target <= 15) return [1, 2, 5].filter((s) => s < target)
+  if (target <= 50) return [1, 5, 10].filter((s) => s < target)
+  if (target <= 200) return [10, 25, 50].filter((s) => s < target)
+  return [10, 50, 100].filter((s) => s < target)
+}
 
 function isItemComplete(item: AmalItem): boolean {
   if (item.type === 'prayers') {
@@ -68,6 +81,8 @@ export const AmalChecklist: React.FC<AmalChecklistProps> = ({
   onOpenAddAmal,
   onEditAmal,
 }) => {
+  const [expandedTargetId, setExpandedTargetId] = useState<string | null>(null)
+
   const completedCount = items.filter(isItemComplete).length
   const totalCount = items.length
   const progressPercent =
@@ -208,150 +223,255 @@ export const AmalChecklist: React.FC<AmalChecklistProps> = ({
             )
           }
 
+          const targetVal = item.target || 1
+          const currentVal = item.value || 0
+          const isTargetExpanded = item.type === 'target' && expandedTargetId === item.id && targetVal > 1
+          const showTargetMiniBar = item.type === 'target' && targetVal > 1 && currentVal > 0 && !isDone
+
           return (
             <div
               key={item.id}
-              className={`p-3.5 rounded-2xl border transition-all duration-200 flex items-center gap-3 ${
+              className={`p-3.5 rounded-2xl border transition-all duration-200 ${
                 isDone
                   ? 'bg-blue-50/50 border-[#0F50BD]/25 shadow-sm'
                   : 'bg-white/80 border-black/[0.05] hover:border-black/[0.1]'
               }`}
             >
-              {/* Icon */}
-              <div className="w-9 h-9 rounded-xl bg-black/[0.04] flex items-center justify-center shrink-0">
-                {renderIcon(item.icon)}
-              </div>
+              <div className="flex items-center gap-3">
+                {/* Icon */}
+                <div className="w-9 h-9 rounded-xl bg-black/[0.04] flex items-center justify-center shrink-0">
+                  {renderIcon(item.icon)}
+                </div>
 
-              {/* Title & Notes */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={`text-[14px] font-bold leading-tight truncate ${
-                      isDone ? 'text-[#0F50BD]' : 'text-[#101828]'
-                    }`}
-                  >
-                    {item.name}
-                  </span>
-                  {item.isLocked ? (
-                    <span className="inline-flex items-center gap-0.5 text-[9.5px] font-bold px-1.5 py-0.5 rounded-md bg-[#0F50BD]/10 text-[#0F50BD] shrink-0">
-                      <Lock size={9} />
-                      Wajib
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => onEditAmal(item)}
-                      className="p-1 rounded-lg text-[#525252]/70 hover:text-[#0F50BD] hover:bg-[#0F50BD]/10 cursor-pointer transition-colors shrink-0"
-                      aria-label={`Edit ${item.name}`}
-                      title="Edit amal"
+                {/* Title & Notes */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`text-[14px] font-bold leading-tight truncate ${
+                        isDone ? 'text-[#0F50BD]' : 'text-[#101828]'
+                      }`}
                     >
-                      <Pencil size={12} />
-                    </button>
+                      {item.name}
+                    </span>
+                    {item.isLocked ? (
+                      <span className="inline-flex items-center gap-0.5 text-[9.5px] font-bold px-1.5 py-0.5 rounded-md bg-[#0F50BD]/10 text-[#0F50BD] shrink-0">
+                        <Lock size={9} />
+                        Wajib
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExpandedTargetId(null)
+                          onEditAmal(item)
+                        }}
+                        className="p-1 rounded-lg text-[#525252]/70 hover:text-[#0F50BD] hover:bg-[#0F50BD]/10 cursor-pointer transition-colors shrink-0"
+                        aria-label={`Edit ${item.name}`}
+                        title="Edit amal"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                    )}
+                  </div>
+                  {item.note && (
+                    <p className="text-[11.5px] text-[#525252] truncate mt-0.5">{item.note}</p>
                   )}
                 </div>
-                {item.note && (
-                  <p className="text-[11.5px] text-[#525252] truncate mt-0.5">{item.note}</p>
+
+                {/* Control based on type */}
+                {item.type === 'checklist' && (
+                  <button
+                    type="button"
+                    onClick={() => onToggleCheck(item.id)}
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                      item.done
+                        ? 'bg-[#0F50BD] text-white shadow-[0_2px_8px_rgba(15,80,189,0.3)]'
+                        : 'border-2 border-black/20 hover:border-[#0F50BD]'
+                    }`}
+                    aria-label={`Centang ${item.name}`}
+                  >
+                    {item.done && <Check size={18} strokeWidth={3} />}
+                  </button>
+                )}
+
+                {item.type === 'counter' && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => onIncrementCounter(item.id, -1)}
+                      disabled={currentVal <= 0}
+                      className="w-7 h-7 rounded-lg border border-black/10 flex items-center justify-center text-[#525252] hover:bg-black/5 disabled:opacity-30 cursor-pointer"
+                      aria-label={`Kurangi ${item.name}`}
+                    >
+                      <Minus size={14} strokeWidth={2.5} />
+                    </button>
+                    <span className="text-xs font-bold min-w-[28px] text-center text-[#101828] tabular-nums">
+                      {currentVal}
+                      {item.unit ? (
+                        <span className="text-[10px] text-[#525252] font-normal ml-0.5">
+                          {item.unit}
+                        </span>
+                      ) : null}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onIncrementCounter(item.id, 1)}
+                      className="w-7 h-7 rounded-lg bg-[#0F50BD] text-white flex items-center justify-center shadow-sm hover:bg-[#1941B5] cursor-pointer"
+                      aria-label={`Tambah ${item.name}`}
+                    >
+                      <Plus size={14} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                )}
+
+                {item.type === 'target' && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    {targetVal > 1 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedTargetId((prev) => (prev === item.id ? null : item.id))
+                        }
+                        aria-expanded={isTargetExpanded}
+                        aria-label={`Isi progres ${item.name} (${currentVal} dari ${targetVal})`}
+                        className={`px-2.5 py-1 rounded-lg border text-xs font-bold tabular-nums transition-colors cursor-pointer ${
+                          isTargetExpanded
+                            ? 'bg-[#0F50BD]/10 border-[#0F50BD] text-[#0F50BD]'
+                            : isDone
+                            ? 'bg-white border-[#0F50BD]/25 text-[#0F50BD]'
+                            : currentVal > 0
+                            ? 'bg-[#0F50BD]/5 border-[#0F50BD]/30 text-[#0F50BD]'
+                            : 'bg-white border-black/15 text-[#525252] hover:border-[#0F50BD]/40'
+                        }`}
+                      >
+                        {currentVal}/{targetVal}
+                      </button>
+                    )}
+
+                    {/* 1-tap complete / undo button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onUpdateValue(item.id, isDone ? 0 : targetVal)
+                        setExpandedTargetId(null)
+                      }}
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 active:scale-95 ${
+                        isDone
+                          ? 'bg-[#0F50BD] text-white shadow-[0_2px_8px_rgba(15,80,189,0.3)]'
+                          : 'border-2 border-black/20 hover:border-[#0F50BD]'
+                      }`}
+                      aria-label={
+                        isDone
+                          ? `Batalkan selesai ${item.name}`
+                          : `Selesaikan target ${item.name} (${targetVal}${item.unit ? ` ${item.unit}` : ''})`
+                      }
+                    >
+                      {isDone && <Check size={18} strokeWidth={3} />}
+                    </button>
+                  </div>
+                )}
+
+                {item.type === 'amount' && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-xs font-bold text-[#101828] tabular-nums">
+                      Rp {currentVal.toLocaleString('id-ID')}
+                    </span>
+                    {currentVal > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => onUpdateValue(item.id, Math.max(0, currentVal - 10000))}
+                        className="w-6 h-6 rounded-lg border border-black/10 text-[#525252] flex items-center justify-center hover:bg-black/5 cursor-pointer"
+                        aria-label={`Kurangi nominal ${item.name}`}
+                      >
+                        <Minus size={12} strokeWidth={2.5} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onUpdateValue(item.id, currentVal + 10000)}
+                      className="px-2 py-1 rounded-lg bg-[#0F50BD]/10 text-[#0F50BD] text-xs font-bold hover:bg-[#0F50BD]/20 cursor-pointer"
+                    >
+                      +10rb
+                    </button>
+                  </div>
                 )}
               </div>
 
-              {/* Control based on type */}
-              {item.type === 'checklist' && (
-                <button
-                  type="button"
-                  onClick={() => onToggleCheck(item.id)}
-                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 ${
-                    item.done
-                      ? 'bg-[#0F50BD] text-white shadow-[0_2px_8px_rgba(15,80,189,0.3)]'
-                      : 'border-2 border-black/20 hover:border-[#0F50BD]'
-                  }`}
-                  aria-label={`Centang ${item.name}`}
-                >
-                  {item.done && <Check size={18} strokeWidth={3} />}
-                </button>
-              )}
-
-              {item.type === 'counter' && (
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => onIncrementCounter(item.id, -1)}
-                    disabled={(item.value || 0) <= 0}
-                    className="w-7 h-7 rounded-lg border border-black/10 flex items-center justify-center text-[#525252] hover:bg-black/5 disabled:opacity-30 cursor-pointer"
-                    aria-label={`Kurangi ${item.name}`}
-                  >
-                    <Minus size={14} strokeWidth={2.5} />
-                  </button>
-                  <span className="text-xs font-bold min-w-[28px] text-center text-[#101828]">
-                    {item.value || 0}
-                    {item.unit ? (
-                      <span className="text-[10px] text-[#525252] font-normal ml-0.5">
-                        {item.unit}
-                      </span>
-                    ) : null}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onIncrementCounter(item.id, 1)}
-                    className="w-7 h-7 rounded-lg bg-[#0F50BD] text-white flex items-center justify-center shadow-sm hover:bg-[#1941B5] cursor-pointer"
-                    aria-label={`Tambah ${item.name}`}
-                  >
-                    <Plus size={14} strokeWidth={2.5} />
-                  </button>
+              {/* Mini progress bar when target is partially completed */}
+              {showTargetMiniBar && (
+                <div className="mt-2.5 w-full h-1.5 rounded-full bg-black/[0.06] overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#0F50BD] to-[#14B8A6] rounded-full transition-all duration-300"
+                    style={{ width: `${Math.min(100, Math.round((currentVal / targetVal) * 100))}%` }}
+                  />
                 </div>
               )}
 
-              {item.type === 'target' && (
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => onIncrementCounter(item.id, -1)}
-                    disabled={(item.value || 0) <= 0}
-                    className="w-7 h-7 rounded-lg border border-black/10 flex items-center justify-center text-[#525252] hover:bg-black/5 disabled:opacity-30 cursor-pointer"
-                    aria-label={`Kurangi ${item.name}`}
-                  >
-                    <Minus size={14} strokeWidth={2.5} />
-                  </button>
-                  <span className="text-xs font-bold text-[#101828] whitespace-nowrap">
-                    {item.value || 0}/{item.target || 1}
-                    {item.unit ? (
-                      <span className="text-[10px] text-[#525252] font-normal ml-0.5">
-                        {item.unit}
-                      </span>
-                    ) : null}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onIncrementCounter(item.id, 1)}
-                    className="w-7 h-7 rounded-lg bg-[#0F50BD] text-white flex items-center justify-center shadow-sm hover:bg-[#1941B5] cursor-pointer"
-                    aria-label={`Tambah ${item.name}`}
-                  >
-                    <Plus size={14} strokeWidth={2.5} />
-                  </button>
-                </div>
-              )}
+              {/* Inline quick-input drawer for partial/custom target values */}
+              {isTargetExpanded && (
+                <div className="mt-2.5 pt-2.5 border-t border-black/[0.06] flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100000}
+                      inputMode="numeric"
+                      value={currentVal === 0 ? '' : currentVal}
+                      placeholder="0"
+                      onChange={(e) => {
+                        const raw = e.target.value.trim()
+                        if (raw === '') {
+                          onUpdateValue(item.id, 0)
+                          return
+                        }
+                        const parsed = Math.max(0, Math.min(100000, Math.floor(Number(raw) || 0)))
+                        onUpdateValue(item.id, parsed)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') setExpandedTargetId(null)
+                      }}
+                      aria-label={`Jumlah ${item.name}`}
+                      className="w-16 px-2 py-1.5 rounded-lg border border-black/15 bg-white text-center text-xs font-bold text-[#101828] tabular-nums focus:outline-none focus:ring-2 focus:ring-[#0F50BD]/30 focus:border-[#0F50BD]"
+                    />
+                    <span className="text-[11px] font-medium text-[#525252]">
+                      / {targetVal}
+                      {item.unit ? ` ${item.unit}` : ''}
+                    </span>
+                  </div>
 
-              {item.type === 'amount' && (
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-xs font-bold text-[#101828]">
-                    Rp {(item.value || 0).toLocaleString('id-ID')}
-                  </span>
-                  {(item.value || 0) > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => onUpdateValue(item.id, Math.max(0, (item.value || 0) - 10000))}
-                      className="w-6 h-6 rounded-lg border border-black/10 text-[#525252] flex items-center justify-center hover:bg-black/5 cursor-pointer"
-                      aria-label={`Kurangi nominal ${item.name}`}
-                    >
-                      <Minus size={12} strokeWidth={2.5} />
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => onUpdateValue(item.id, (item.value || 0) + 10000)}
-                    className="px-2 py-1 rounded-lg bg-[#0F50BD]/10 text-[#0F50BD] text-xs font-bold hover:bg-[#0F50BD]/20 cursor-pointer"
-                  >
-                    +10rb
-                  </button>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {getTargetStepChips(targetVal, item.unit).map((step) => (
+                      <button
+                        key={step}
+                        type="button"
+                        onClick={() => onUpdateValue(item.id, currentVal + step)}
+                        className="px-2 py-1 rounded-lg bg-[#0F50BD]/10 text-[#0F50BD] text-[11px] font-bold hover:bg-[#0F50BD]/20 active:scale-95 transition-all cursor-pointer"
+                      >
+                        +{step}
+                      </button>
+                    ))}
+                    {currentVal > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => onUpdateValue(item.id, 0)}
+                        className="px-2 py-1 rounded-lg border border-black/10 bg-white text-[#525252] text-[11px] font-semibold hover:bg-black/5 cursor-pointer"
+                      >
+                        Reset
+                      </button>
+                    )}
+                    {!isDone && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onUpdateValue(item.id, targetVal)
+                          setExpandedTargetId(null)
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-[#0F50BD] text-white text-[11px] font-bold hover:bg-[#1941B5] active:scale-95 transition-all cursor-pointer"
+                      >
+                        Penuh
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
