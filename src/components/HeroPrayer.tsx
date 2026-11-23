@@ -11,6 +11,8 @@ interface HeroPrayerProps {
   currentTime?: string
   tzLabel?: 'WIB' | 'WITA' | 'WIT'
   arcProgress?: number
+  currentPrayerName?: string
+  currentPrayerTime?: string
   nextPrayerName?: string
   nextPrayerTime?: string
   remainingTime?: string
@@ -25,6 +27,8 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
   currentTime,
   tzLabel,
   arcProgress,
+  currentPrayerName,
+  currentPrayerTime,
   nextPrayerName,
   nextPrayerTime,
   remainingTime,
@@ -141,105 +145,123 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
 
           {/* Circular Arc Gauge */}
           <div className="relative z-10 -mt-2 sm:mt-0 max-w-[310px] mx-auto w-full">
-            <svg
-              viewBox="0 0 300 168"
-              className="w-full h-auto drop-shadow-sm"
-              fill="none"
-              style={
-                {
-                  '--arc-offset': animatedOffset,
-                  '--arc-echo-mid': echoMid,
-                  '--arc-echo-end': echoEnd,
-                } as React.CSSProperties
-              }
-            >
-              <defs>
-                <linearGradient id="heroGrad" x1="0" y1="1" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#0F50BD" />
-                  <stop offset="55%" stopColor="#0F50BD" />
-                  <stop offset="100%" stopColor="#14B8A6" />
-                </linearGradient>
-                <mask id="arcFillMask">
+            <div className="relative">
+              <svg
+                viewBox="0 0 300 168"
+                className="w-full h-auto drop-shadow-sm"
+                fill="none"
+                style={
+                  {
+                    '--arc-offset': animatedOffset,
+                    '--arc-echo-mid': echoMid,
+                    '--arc-echo-end': echoEnd,
+                  } as React.CSSProperties
+                }
+              >
+                <defs>
+                  <linearGradient id="heroGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#8BA0F3" />
+                    <stop offset="55%" stopColor="#14B8A6" />
+                    <stop offset="100%" stopColor="#5EEAD4" />
+                  </linearGradient>
+                  <mask id="arcFillMask">
+                    <path
+                      d="M28 156 A122 122 0 0 1 272 156"
+                      stroke="#FFFFFF"
+                      strokeWidth="17"
+                      strokeLinecap="round"
+                      strokeDasharray={ARC_LENGTH}
+                      strokeDashoffset={animatedOffset}
+                      className={arcTransitionClass}
+                    />
+                  </mask>
+                </defs>
+                {/* Base empty track — frosted translucent white so filled progress pops clearly */}
+                <path
+                  d="M28 156 A122 122 0 0 1 272 156"
+                  stroke="rgba(255, 255, 255, 0.22)"
+                  strokeWidth="17"
+                  strokeLinecap="round"
+                />
+                {/* One-way forward-dissolving echo behind tip — pushes forward into empty track and fades out */}
+                {showTipEcho && (
                   <path
                     d="M28 156 A122 122 0 0 1 272 156"
-                    stroke="#FFFFFF"
+                    stroke="url(#heroGrad)"
+                    strokeWidth="17"
+                    strokeLinecap="round"
+                    strokeDasharray={ARC_LENGTH}
+                    className="arc-tip-echo"
+                  />
+                )}
+                {/* Stationary active progress track synced to real elapsed time */}
+                {showActiveStroke && (
+                  <path
+                    d="M28 156 A122 122 0 0 1 272 156"
+                    stroke="url(#heroGrad)"
                     strokeWidth="17"
                     strokeLinecap="round"
                     strokeDasharray={ARC_LENGTH}
                     strokeDashoffset={animatedOffset}
                     className={arcTransitionClass}
                   />
-                </mask>
-              </defs>
-              {/* Base track */}
-              <path
-                d="M28 156 A122 122 0 0 1 272 156"
-                stroke="#FFFFFF"
-                strokeWidth="17"
-                strokeLinecap="round"
-              />
-              {/* One-way forward-dissolving echo behind tip — pushes forward into white track and fades out */}
-              {showTipEcho && (
-                <path
-                  d="M28 156 A122 122 0 0 1 272 156"
-                  stroke="url(#heroGrad)"
-                  strokeWidth="17"
-                  strokeLinecap="round"
-                  strokeDasharray={ARC_LENGTH}
-                  className="arc-tip-echo"
-                />
-              )}
-              {/* Stationary active progress track synced to real elapsed time */}
-              {showActiveStroke && (
-                <path
-                  d="M28 156 A122 122 0 0 1 272 156"
-                  stroke="url(#heroGrad)"
-                  strokeWidth="17"
-                  strokeLinecap="round"
-                  strokeDasharray={ARC_LENGTH}
-                  strokeDashoffset={animatedOffset}
-                  className={arcTransitionClass}
-                />
-              )}
-              {/* Synchronized wipe: translucent wash leads, exact heroGrad color sweeps right behind */}
-              {showWave && (
-                <g mask="url(#arcFillMask)">
-                  <path
-                    d="M28 156 A122 122 0 0 1 272 156"
-                    stroke="rgba(255, 255, 255, 0.34)"
-                    strokeWidth="17"
-                    strokeLinecap="round"
-                    strokeDasharray={ARC_LENGTH}
-                    className="arc-wave-transparent"
-                  />
-                  <path
-                    d="M28 156 A122 122 0 0 1 272 156"
-                    stroke="url(#heroGrad)"
-                    strokeWidth="17.6"
-                    strokeLinecap="round"
-                    strokeDasharray={ARC_LENGTH}
-                    className="arc-wave-color"
-                  />
-                </g>
-              )}
-            </svg>
+                )}
+                {/* Synchronized wipe: translucent wash leads, exact heroGrad color sweeps right behind */}
+                {showWave && (
+                  <g mask="url(#arcFillMask)">
+                    <path
+                      d="M28 156 A122 122 0 0 1 272 156"
+                      stroke="rgba(255, 255, 255, 0.36)"
+                      strokeWidth="17"
+                      strokeLinecap="round"
+                      strokeDasharray={ARC_LENGTH}
+                      className="arc-wave-transparent"
+                    />
+                    <path
+                      d="M28 156 A122 122 0 0 1 272 156"
+                      stroke="url(#heroGrad)"
+                      strokeWidth="17.6"
+                      strokeLinecap="round"
+                      strokeDasharray={ARC_LENGTH}
+                      className="arc-wave-color"
+                    />
+                  </g>
+                )}
+              </svg>
 
-            {/* Text inside arc */}
-            <div className="absolute inset-x-0 bottom-1 text-center pointer-events-none flex flex-col items-center">
-              <div className="text-3xl font-extrabold tracking-tight leading-tight">
-                {nextPrayerName || 'Memuat...'}
+              {/* Text inside arc */}
+              <div className="absolute inset-x-0 bottom-1 text-center pointer-events-none flex flex-col items-center">
+                <div className="text-3xl font-extrabold tracking-tight leading-tight">
+                  {nextPrayerName || 'Memuat...'}
+                </div>
+                <div className="text-xs sm:text-sm font-medium text-white/80 mt-0.5">
+                  Sisa waktu · pukul <span className="font-semibold">{nextPrayerTime || '--:--'}</span>
+                </div>
+                <span className="inline-block mt-2 px-3.5 py-1 bg-white/20 border border-white/30 backdrop-blur-md rounded-full text-xs font-bold tracking-wider tabular-nums">
+                  {remainingTime || '--:--:--'}
+                </span>
               </div>
-              <div className="text-xs sm:text-sm font-medium text-white/80 mt-0.5">
-                Sisa waktu · pukul <span className="font-semibold">{nextPrayerTime || '--:--'}</span>
+            </div>
+
+            {/* Start -> End labels for the active 1-cycle prayer interval */}
+            <div className="mt-1.5 px-1.5 flex items-center justify-between text-[11px] leading-tight pointer-events-none">
+              <div className="flex flex-col items-start">
+                <span className="font-semibold text-white/90">{currentPrayerName || '--'}</span>
+                <span className="text-[10.5px] font-medium text-[#8BA0F3] tabular-nums">
+                  {currentPrayerTime || '--:--'}
+                </span>
               </div>
-              <span className="inline-block mt-2 px-3.5 py-1 bg-white/20 border border-white/30 backdrop-blur-md rounded-full text-xs font-bold tracking-wider">
-                {remainingTime || '--:--:--'}
-              </span>
+              <div className="flex flex-col items-end">
+                <span className="font-semibold text-white/90">{nextPrayerName || '--'}</span>
+                <span className="text-[10.5px] font-medium text-[#5EEAD4] tabular-nums">
+                  {nextPrayerTime || '--:--'}
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Live Clock Strip & Prayer Detail Trigger */}
-          <div className="relative z-10 mt-4 pt-3 border-t border-white/15 flex items-center justify-between text-xs text-white/85">
+          <div className="relative z-10 mt-3 pt-3 border-t border-white/15 flex items-center justify-between text-xs text-white/85">
             <div className="flex items-center gap-1.5">
               <Clock size={15} className="text-[#8BA0F3]" />
               <span className="font-semibold">

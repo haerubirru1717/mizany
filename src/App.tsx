@@ -431,6 +431,8 @@ export default function App() {
                 currentTime={prayerSchedule?.currentTime}
                 tzLabel={prayerSchedule?.tzLabel}
                 arcProgress={prayerSchedule?.arcProgress}
+                currentPrayerName={prayerSchedule?.currentPrayer?.name}
+                currentPrayerTime={prayerSchedule?.currentPrayer?.time}
                 nextPrayerName={prayerSchedule?.nextPrayer?.name}
                 nextPrayerTime={prayerSchedule?.nextPrayer?.time}
                 remainingTime={prayerSchedule?.nextPrayer?.remaining}
