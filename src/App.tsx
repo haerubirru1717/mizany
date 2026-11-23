@@ -11,6 +11,7 @@ import { KalenderView } from './views/KalenderView'
 import { AturView } from './views/AturView'
 import { PrayerView } from './views/PrayerView'
 import { Onboarding } from './components/Onboarding'
+import { fetchPrayerTimes, PrayerSchedule } from './services/prayerService'
 
 const DEFAULT_AMAL: AmalItem[] = [
   { id: 'puasa', name: 'Puasa', note: 'Sejak Subuh tadi', icon: 'sun', type: 'checklist', done: true },
@@ -30,8 +31,9 @@ export default function App() {
   const [amalItems, setAmalItems] = useState<AmalItem[]>(DEFAULT_AMAL)
   const [customAmalItems, setCustomAmalItems] = useState<AmalItem[]>([])
   const [showOnboarding, setShowOnboarding] = useState<boolean>(false)
+  const [prayerSchedule, setPrayerSchedule] = useState<PrayerSchedule | null>(null)
 
-  // Initialize from localStorage safely
+  // Initialize settings from localStorage safely
   useEffect(() => {
     try {
       const storedOnboarding = localStorage.getItem('mizany_has_seen_onboarding')
@@ -50,6 +52,27 @@ export default function App() {
       // Ignore storage errors in sandbox
     }
   }, [])
+
+  // Live Prayer Times & dynamic countdown loop
+  useEffect(() => {
+    let isMounted = true
+
+    const updateTimes = () => {
+      fetchPrayerTimes(city).then((data) => {
+        if (isMounted && data) {
+          setPrayerSchedule(data)
+        }
+      })
+    }
+
+    updateTimes()
+    const interval = setInterval(updateTimes, 1000)
+
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
+  }, [city])
 
   const handleCompleteOnboarding = () => {
     setShowOnboarding(false)
@@ -143,6 +166,11 @@ export default function App() {
           <div className="space-y-2">
             <HeroPrayer
               city={city}
+              hijriDate={prayerSchedule?.hijriDate}
+              gregorianDate={prayerSchedule?.gregorianDate}
+              nextPrayerName={prayerSchedule?.nextPrayer?.name}
+              nextPrayerTime={prayerSchedule?.nextPrayer?.time}
+              remainingTime={prayerSchedule?.nextPrayer?.remaining}
               onOpenPrayerDetail={() => setActiveTab('prayer')}
             />
 
@@ -153,6 +181,7 @@ export default function App() {
 
             <PrayerRow
               city={city}
+              prayers={prayerSchedule?.prayers}
               onSelectPrayer={() => setActiveTab('prayer')}
             />
 
