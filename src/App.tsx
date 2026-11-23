@@ -18,6 +18,7 @@ import { KalenderView } from './views/KalenderView'
 import { AturView } from './views/AturView'
 import { PrayerView } from './views/PrayerView'
 import { Onboarding } from './components/Onboarding'
+import { StreakCelebration } from './components/StreakCelebration'
 import {
   CachedPrayerData,
   computePrayerSchedule,
@@ -35,6 +36,7 @@ type DailyLogEntry = {
 type DailyLogsByDate = Record<string, Record<string, DailyLogEntry>>
 
 const DAILY_LOGS_STORAGE_KEY = 'mizany_daily_logs_v1'
+const STREAK_CELEBRATED_KEY = 'mizany_streak_celebrated_date'
 
 const EMPTY_PRAYER_CHECKS: PrayerChecks = {
   subuh: false,
@@ -79,9 +81,10 @@ export default function App() {
   const [prayerSchedule, setPrayerSchedule] = useState<PrayerSchedule | null>(null)
   const [hijriData, setHijriData] = useState<HijriHeroData | null>(null)
 
-  // Modal state for Add / Edit custom amal
+  // Modal state for Add / Edit custom amal & Streak celebration
   const [amalModalOpen, setAmalModalOpen] = useState<boolean>(false)
   const [editingAmal, setEditingAmal] = useState<AmalItem | null>(null)
+  const [showStreakModal, setShowStreakModal] = useState<boolean>(false)
 
   const todayIso = getLocalIsoDate(0)
 
@@ -166,8 +169,16 @@ export default function App() {
     }
   }, [])
 
-  // Helper to update today's real daily log and persist immediately
+  // Helper to update today's real daily log, persist immediately, and ignite streak celebration once per day
   const updateTodayEntry = (id: string, updater: (prev: DailyLogEntry) => DailyLogEntry) => {
+    const prevDayLog = dailyLogs[todayIso] || {}
+    const wasActiveToday = hasCompletedAny(prevDayLog)
+    const nextDayLog = {
+      ...prevDayLog,
+      [id]: updater(prevDayLog[id] || {}),
+    }
+    const isNowActiveToday = hasCompletedAny(nextDayLog)
+
     setDailyLogs((prevLogs) => {
       const dayLog = prevLogs[todayIso] || {}
       const updatedLogs: DailyLogsByDate = {
@@ -182,6 +193,17 @@ export default function App() {
       } catch {}
       return updatedLogs
     })
+
+    if (!wasActiveToday && isNowActiveToday) {
+      try {
+        if (localStorage.getItem(STREAK_CELEBRATED_KEY) !== todayIso) {
+          localStorage.setItem(STREAK_CELEBRATED_KEY, todayIso)
+          setTimeout(() => setShowStreakModal(true), 180)
+        }
+      } catch {
+        setTimeout(() => setShowStreakModal(true), 180)
+      }
+    }
   }
 
   // Mode Ramadan aktif otomatis saat bulan Hijriah = 9 (Ramadan) dari MABIMS
@@ -419,6 +441,14 @@ export default function App() {
         onDelete={handleDeleteCustomAmal}
       />
 
+      {/* Streak Ignition Celebration Modal */}
+      <StreakCelebration
+        isOpen={showStreakModal}
+        streakDays={streakDays}
+        last7DaysActive={last7DaysActive}
+        onClose={() => setShowStreakModal(false)}
+      />
+
       {/* Main Container */}
       <main className="max-w-md mx-auto min-h-screen px-4 pt-2 sm:pt-4 pb-20 relative z-10">
         <div key={activeTab} className="view-enter">
@@ -446,6 +476,7 @@ export default function App() {
                 last7DaysActive={last7DaysActive}
                 onNavigate={(tab) => setActiveTab(tab)}
                 onScrollToChecklist={() => scrollToSection('checklist-section')}
+                onOpenStreak={() => setShowStreakModal(true)}
               />
 
               <PrayerRow

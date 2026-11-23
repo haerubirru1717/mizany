@@ -1,13 +1,15 @@
 import React from 'react'
 import { TabKey } from '../types'
-import { BookOpen, Sparkles, Calendar, Flame, ArrowRight } from 'lucide-react'
+import { BookOpen, Sparkles, Calendar, ArrowRight } from 'lucide-react'
 import { MosqueSkyline } from './MosqueSkyline'
+import { AnimatedFlame } from './StreakCelebration'
 
 interface QuickActionsProps {
   streakDays: number
   last7DaysActive: boolean[]
   onNavigate: (tab: TabKey) => void
   onScrollToChecklist: () => void
+  onOpenStreak?: () => void
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({
@@ -15,7 +17,10 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   last7DaysActive,
   onNavigate,
   onScrollToChecklist,
+  onOpenStreak,
 }) => {
+  const isStreakActive = streakDays > 0
+
   return (
     <div className="space-y-4 mt-5">
       {/* 3 Quick Action Tiles */}
@@ -78,18 +83,35 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         </div>
       </button>
 
-      {/* Streak Card */}
-      <div className="glass-card p-4 flex items-center gap-3.5" aria-label="Streak konsistensi">
-        <div className="w-11 h-11 rounded-2xl bg-[#F59E0B]/15 text-[#F59E0B] flex items-center justify-center shrink-0">
-          <Flame size={24} strokeWidth={2.2} />
+      {/* Animated Streak Card — tap to view celebration when active, or jump to checklist when 0 */}
+      <button
+        type="button"
+        onClick={() => (isStreakActive && onOpenStreak ? onOpenStreak() : onScrollToChecklist())}
+        className={`w-full glass-card p-4 flex items-center gap-3.5 text-left cursor-pointer active:scale-[0.99] transition-all ${
+          isStreakActive ? 'hover:bg-white border-[#F59E0B]/20' : 'hover:bg-white'
+        }`}
+        aria-label={
+          isStreakActive
+            ? `Streak konsistensi ${streakDays} hari beruntun — ketuk untuk melihat detail streak`
+            : 'Mulai streak hari ini — ketuk menuju checklist amal'
+        }
+      >
+        <div
+          className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
+            isStreakActive
+              ? 'bg-gradient-to-br from-[#FEF3C7] to-[#F59E0B]/20 ring-1 ring-[#F59E0B]/25'
+              : 'bg-black/[0.05]'
+          }`}
+        >
+          <AnimatedFlame active={isStreakActive} size={26} showEmbers={isStreakActive} />
         </div>
 
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="text-[15px] font-bold text-[#101828] leading-tight">
-            {streakDays > 0 ? `${streakDays} hari beruntun` : 'Mulai hari ini'}
+            {isStreakActive ? `${streakDays} hari beruntun` : 'Mulai hari ini'}
           </div>
-          <div className="text-[12px] text-[#525252] mt-0.5">
-            {streakDays > 0
+          <div className="text-[12px] text-[#525252] mt-0.5 truncate">
+            {isStreakActive
               ? 'Checklist amal tercatat konsisten'
               : 'Centang minimal 1 amal untuk mulai streak'}
           </div>
@@ -100,22 +122,26 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           {last7DaysActive.map((active, idx) => {
             const isTodayDot = idx === last7DaysActive.length - 1
             return (
-              <span
-                key={idx}
-                className={`w-2.5 h-2.5 rounded-full transition-colors ${
-                  active
-                    ? isTodayDot
-                      ? 'bg-[#0F50BD] ring-2 ring-[#0F50BD]/30'
-                      : 'bg-[#0F50BD]'
-                    : isTodayDot
-                    ? 'bg-black/15 ring-2 ring-[#0F50BD]/20'
-                    : 'bg-black/10'
-                }`}
-              />
+              <span key={idx} className="relative inline-flex items-center justify-center w-2.5 h-2.5">
+                {active && isTodayDot && (
+                  <span className="streak-dot-pulse absolute inset-0 rounded-full bg-[#0F50BD]" />
+                )}
+                <span
+                  className={`relative w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                    active
+                      ? isTodayDot
+                        ? 'bg-gradient-to-br from-[#0F50BD] to-[#14B8A6] ring-2 ring-[#0F50BD]/25'
+                        : 'bg-[#0F50BD]'
+                      : isTodayDot
+                      ? 'bg-black/15 ring-2 ring-[#0F50BD]/20'
+                      : 'bg-black/10'
+                  }`}
+                />
+              </span>
             )
           })}
         </div>
-      </div>
+      </button>
     </div>
   )
 }
