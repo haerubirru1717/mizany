@@ -1,6 +1,12 @@
 export type TabKey = 'beranda' | 'quran' | 'kalender' | 'atur' | 'prayer' | 'tasbih'
 
-export type AmalType = 'checklist' | 'target' | 'counter' | 'amount'
+export type AmalType = 'prayers' | 'checklist' | 'target' | 'counter' | 'amount'
+
+export type CustomAmalType = 'checklist' | 'target' | 'counter' | 'amount'
+
+export type MandatoryPrayerKey = 'subuh' | 'dzuhur' | 'ashar' | 'maghrib' | 'isya'
+
+export type PrayerChecks = Record<MandatoryPrayerKey, boolean>
 
 export interface AmalItem {
   id: string
@@ -12,6 +18,8 @@ export interface AmalItem {
   done?: boolean
   value?: number
   target?: number
+  prayerChecks?: PrayerChecks
+  isLocked?: boolean
   isCustom?: boolean
 }
 

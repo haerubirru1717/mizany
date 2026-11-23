@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
-import { AmalItem, AmalType } from '../types'
-import { MapPin, Plus, Trash2, Minus, Info, Sparkles } from 'lucide-react'
+import React from 'react'
+import { AmalItem } from '../types'
+import { MapPin, Plus, Trash2, Minus, Info, Pencil } from 'lucide-react'
 
 interface AturViewProps {
   city: string
@@ -8,7 +8,8 @@ interface AturViewProps {
   tilawahTarget: number
   onChangeTilawahTarget: (newTarget: number) => void
   customAmalItems: AmalItem[]
-  onAddCustomAmal: (item: Omit<AmalItem, 'id'>) => void
+  onOpenAddAmal: () => void
+  onEditAmal: (item: AmalItem) => void
   onDeleteCustomAmal: (id: string) => void
   onReplayOnboarding: () => void
 }
@@ -27,38 +28,30 @@ const CITIES = [
   'Makassar',
 ]
 
+function formatAmalSubtitle(item: AmalItem): string {
+  if (item.type === 'target') {
+    return `Target: ${item.target || 1}${item.unit ? ` ${item.unit}` : ''}`
+  }
+  if (item.type === 'counter') {
+    return item.unit ? `Hitungan (${item.unit})` : 'Hitungan'
+  }
+  if (item.type === 'amount') {
+    return 'Nominal (Rp)'
+  }
+  return 'Ceklist'
+}
+
 export const AturView: React.FC<AturViewProps> = ({
   city,
   onChangeCity,
   tilawahTarget,
   onChangeTilawahTarget,
   customAmalItems,
-  onAddCustomAmal,
+  onOpenAddAmal,
+  onEditAmal,
   onDeleteCustomAmal,
   onReplayOnboarding,
 }) => {
-  const [newAmalName, setNewAmalName] = useState('')
-  const [newAmalType, setNewAmalType] = useState<AmalType>('checklist')
-  const [newAmalTarget, setNewAmalTarget] = useState(20)
-
-  const handleAddSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newAmalName.trim()) return
-
-    onAddCustomAmal({
-      name: newAmalName.trim(),
-      type: newAmalType,
-      target: newAmalType === 'target' ? newAmalTarget : undefined,
-      unit: newAmalType === 'target' ? 'kali' : undefined,
-      icon: 'star',
-      isCustom: true,
-      done: false,
-      value: 0,
-    })
-
-    setNewAmalName('')
-  }
-
   return (
     <div className="space-y-5 pb-24">
       {/* Title */}
@@ -88,7 +81,7 @@ export const AturView: React.FC<AturViewProps> = ({
           <MapPin size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0F50BD] pointer-events-none" />
         </div>
         <p className="text-[11px] text-[#525252] mt-1.5">
-          Jadwal otomatis disesuaikan dengan metode resmi Kementerian Agama RI.
+          Jadwal otomatis disesuaikan dengan data resmi Bimas Islam Kementerian Agama RI.
         </p>
       </div>
 
@@ -129,84 +122,52 @@ export const AturView: React.FC<AturViewProps> = ({
           Amal Tambahan Saya
         </h3>
 
-        {/* Existing Custom Items */}
         {customAmalItems.length > 0 ? (
-          <div className="space-y-2 mb-4">
+          <div className="space-y-2 mb-3.5">
             {customAmalItems.map((item) => (
               <div
                 key={item.id}
-                className="p-3 rounded-xl bg-white border border-black/[0.06] flex items-center justify-between"
+                className="p-3 rounded-xl bg-white border border-black/[0.06] flex items-center justify-between gap-2"
               >
-                <div>
-                  <div className="text-sm font-bold text-[#101828]">{item.name}</div>
-                  <div className="text-[11px] text-[#525252] capitalize">Tipe: {item.type}</div>
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-[#101828] truncate">{item.name}</div>
+                  <div className="text-[11px] text-[#525252]">{formatAmalSubtitle(item)}</div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onDeleteCustomAmal(item.id)}
-                  className="w-8 h-8 rounded-lg text-red-500 hover:bg-red-50 flex items-center justify-center cursor-pointer transition-colors"
-                  aria-label={`Hapus ${item.name}`}
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => onEditAmal(item)}
+                    className="w-8 h-8 rounded-lg text-[#0F50BD] hover:bg-[#0F50BD]/10 flex items-center justify-center cursor-pointer transition-colors"
+                    aria-label={`Edit ${item.name}`}
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDeleteCustomAmal(item.id)}
+                    className="w-8 h-8 rounded-lg text-red-500 hover:bg-red-50 flex items-center justify-center cursor-pointer transition-colors"
+                    aria-label={`Hapus ${item.name}`}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-xs text-[#525252] mb-3">Belum ada amal kustom yang ditambahkan.</p>
+          <p className="text-xs text-[#525252] mb-3.5">
+            Secara default hanya amalan wajib Sholat 5 waktu (dan Puasa saat Ramadan). Tambahkan amal harianmu di bawah.
+          </p>
         )}
 
-        {/* Form Tambah Amal */}
-        <form onSubmit={handleAddSubmit} className="space-y-2.5 pt-2 border-t border-black/[0.06]">
-          <input
-            type="text"
-            value={newAmalName}
-            onChange={(e) => setNewAmalName(e.target.value)}
-            placeholder="Nama amal, mis. Sholat Dhuha"
-            maxLength={40}
-            className="w-full p-3 rounded-xl border border-black/10 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#0F50BD]/30"
-          />
-
-          <div className="grid grid-cols-2 gap-2">
-            <select
-              value={newAmalType}
-              onChange={(e) => setNewAmalType(e.target.value as AmalType)}
-              className="p-2.5 rounded-xl border border-black/10 bg-white text-xs font-semibold focus:outline-none"
-            >
-              <option value="checklist">Ceklist (Ya/Tidak)</option>
-              <option value="counter">Counter (Hitungan)</option>
-              <option value="target">Target Nilai</option>
-              <option value="amount">Nominal Uang</option>
-            </select>
-
-            {newAmalType === 'target' ? (
-              <input
-                type="number"
-                min="1"
-                value={newAmalTarget}
-                onChange={(e) => setNewAmalTarget(Number(e.target.value))}
-                className="p-2.5 rounded-xl border border-black/10 bg-white text-xs font-semibold focus:outline-none"
-                placeholder="Target nilai"
-              />
-            ) : (
-              <button
-                type="submit"
-                className="py-2.5 px-4 rounded-xl bg-[#0F50BD] text-white text-xs font-bold hover:bg-[#1941B5] transition-colors cursor-pointer shadow-sm"
-              >
-                + Tambah
-              </button>
-            )}
-          </div>
-
-          {newAmalType === 'target' && (
-            <button
-              type="submit"
-              className="w-full py-2.5 px-4 rounded-xl bg-[#0F50BD] text-white text-xs font-bold hover:bg-[#1941B5] transition-colors cursor-pointer shadow-sm"
-            >
-              + Tambah Amal Target
-            </button>
-          )}
-        </form>
+        <button
+          type="button"
+          onClick={onOpenAddAmal}
+          className="w-full py-2.5 px-4 rounded-full bg-[#0F50BD] text-white text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-[#1941B5] transition-colors cursor-pointer shadow-sm"
+        >
+          <Plus size={15} strokeWidth={2.5} />
+          <span>Tambah Amal Baru</span>
+        </button>
       </div>
 
       {/* 4. Disclaimer Kejujuran (Kunci Desain & Spesifikasi) */}

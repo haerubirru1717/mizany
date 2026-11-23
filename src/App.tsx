@@ -1,9 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { TabKey, AmalItem } from './types'
+import {
+  TabKey,
+  AmalItem,
+  CustomAmalType,
+  MandatoryPrayerKey,
+  PrayerChecks,
+} from './types'
 import { HeroPrayer } from './components/HeroPrayer'
 import { PrayerRow } from './components/PrayerRow'
 import { QuickActions } from './components/QuickActions'
 import { AmalChecklist } from './components/AmalChecklist'
+import { AmalFormModal } from './components/AmalFormModal'
 import { BottomNav } from './components/BottomNav'
 import { QuranView } from './views/QuranView'
 import { TasbihView } from './views/TasbihView'
@@ -14,10 +21,22 @@ import { Onboarding } from './components/Onboarding'
 import { fetchPrayerTimes, PrayerSchedule } from './services/prayerService'
 import { fetchHijriHeroData, HijriHeroData } from './services/hijriService'
 
-type DailyLogEntry = { done?: boolean; value?: number }
+type DailyLogEntry = {
+  done?: boolean
+  value?: number
+  prayers?: PrayerChecks
+}
 type DailyLogsByDate = Record<string, Record<string, DailyLogEntry>>
 
 const DAILY_LOGS_STORAGE_KEY = 'mizany_daily_logs_v1'
+
+const EMPTY_PRAYER_CHECKS: PrayerChecks = {
+  subuh: false,
+  dzuhur: false,
+  ashar: false,
+  maghrib: false,
+  isya: false,
+}
 
 function getLocalIsoDate(daysOffset = 0): string {
   const d = new Date()
@@ -27,7 +46,21 @@ function getLocalIsoDate(daysOffset = 0): string {
 
 function hasCompletedAny(dayLog?: Record<string, DailyLogEntry>): boolean {
   if (!dayLog) return false
-  return Object.values(dayLog).some((entry) => entry.done === true || (entry.value || 0) > 0)
+  return Object.values(dayLog).some((entry) => {
+    if (entry.done === true || (entry.value || 0) > 0) return true
+    if (entry.prayers && Object.values(entry.prayers).some(Boolean)) return true
+    return false
+  })
+}
+
+function inferAmalIcon(name: string, type: CustomAmalType): string {
+  const lower = name.toLowerCase()
+  if (type === 'amount' || /sedekah|infaq|infak|zakat|wakaf/.test(lower)) return 'gift'
+  if (/qur|tilawah|baca|tadarus|hafal|muroja/.test(lower)) return 'book'
+  if (/puasa|dhuha|sahur/.test(lower)) return 'sun'
+  if (/tarawih|tahajud|witir|qiyam|malam/.test(lower)) return 'moon'
+  if (/dzikir|zikir|tasbih|sholawat|salawat|istighfar/.test(lower)) return 'beads'
+  return 'star'
 }
 
 export default function App() {
@@ -39,6 +72,10 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState<boolean>(false)
   const [prayerSchedule, setPrayerSchedule] = useState<PrayerSchedule | null>(null)
   const [hijriData, setHijriData] = useState<HijriHeroData | null>(null)
+
+  // Modal state for Add / Edit custom amal
+  const [amalModalOpen, setAmalModalOpen] = useState<boolean>(false)
+  const [editingAmal, setEditingAmal] = useState<AmalItem | null>(null)
 
   const todayIso = getLocalIsoDate(0)
 
@@ -122,54 +159,75 @@ export default function App() {
 
   const todayLog = dailyLogs[todayIso] || {}
 
-  // Build real base checklist items synchronized with live prayer times, target tilawah, and Mode Ramadan
-  const baseAmalItems: AmalItem[] = useMemo(() => {
+  // Default mandatory items ONLY: Sholat 5 Waktu (always locked) + Puasa Ramadan (auto locked in Ramadan)
+  const mandatoryAmalItems: AmalItem[] = useMemo(() => {
     const nextPrayerNote = prayerSchedule?.nextPrayer
       ? `Berikutnya: ${prayerSchedule.nextPrayer.name} — ${prayerSchedule.nextPrayer.time}`
       : 'Jadwal Bimas Islam Kemenag RI'
 
-    const list: AmalItem[] = []
+    const list: AmalItem[] = [
+      {
+        id: 'sholat',
+        name: 'Sholat 5 Waktu',
+        note: nextPrayerNote,
+        icon: 'dome',
+        type: 'prayers',
+        isLocked: true,
+      },
+    ]
 
     if (isRamadan) {
-      list.push(
-        { id: 'puasa', name: 'Puasa', note: 'Puasa wajib Ramadan', icon: 'sun', type: 'checklist' },
-        { id: 'sahur', name: 'Sahur', note: prayerSchedule?.timings?.imsak ? `Sebelum imsak — ${prayerSchedule.timings.imsak}` : 'Sebelum imsak', icon: 'bowl', type: 'checklist' }
-      )
+      list.push({
+        id: 'puasa',
+        name: 'Puasa Ramadan',
+        note: prayerSchedule?.timings?.maghrib
+          ? `Berbuka pukul ${prayerSchedule.timings.maghrib}`
+          : 'Puasa wajib Ramadan',
+        icon: 'sun',
+        type: 'checklist',
+        isLocked: true,
+      })
     }
-
-    list.push({ id: 'sholat', name: 'Sholat 5 waktu', note: nextPrayerNote, icon: 'dome', type: 'checklist' })
-
-    if (isRamadan) {
-      list.push(
-        { id: 'tarawih', name: 'Tarawih', note: 'Di masjid / rumah', icon: 'moon', type: 'checklist' },
-        { id: 'witir', name: 'Witir', note: 'Penutup malam', icon: 'star', type: 'checklist' }
-      )
-    } else {
-      list.push({ id: 'puasa_sunnah', name: 'Puasa Sunnah', note: 'Senin-Kamis / Ayyamul Bidh', icon: 'sun', type: 'checklist' })
-    }
-
-    list.push(
-      { id: 'tilawah', name: 'Tilawah', note: `Target ${tilawahTarget} halaman`, icon: 'book', type: 'target', unit: 'halaman', target: tilawahTarget },
-      { id: 'dzikir', name: 'Dzikir', note: 'Pagi & petang', icon: 'beads', type: 'counter' },
-      { id: 'sedekah', name: 'Sedekah', note: 'Harian / infaq', icon: 'gift', type: 'amount' }
-    )
 
     return list
-  }, [isRamadan, prayerSchedule?.nextPrayer?.name, prayerSchedule?.nextPrayer?.time, prayerSchedule?.timings?.imsak, tilawahTarget])
+  }, [
+    isRamadan,
+    prayerSchedule?.nextPrayer?.name,
+    prayerSchedule?.nextPrayer?.time,
+    prayerSchedule?.timings?.maghrib,
+  ])
 
-  // Hydrate checklist items with today's persisted real log values
+  // Hydrate mandatory + custom user amals with today's persisted log values
   const hydratedItems: AmalItem[] = useMemo(() => {
-    return [...baseAmalItems, ...customAmalItems].map((item) => {
+    const customWithNotes = customAmalItems.map((item) => ({
+      ...item,
+      isCustom: true,
+      note:
+        item.type === 'target'
+          ? `Target ${item.target || 1}${item.unit ? ` ${item.unit}` : ''}`
+          : item.note,
+    }))
+
+    return [...mandatoryAmalItems, ...customWithNotes].map((item) => {
       const entry = todayLog[item.id]
+      if (item.type === 'prayers') {
+        return {
+          ...item,
+          prayerChecks: {
+            ...EMPTY_PRAYER_CHECKS,
+            ...(entry?.prayers || {}),
+          },
+        }
+      }
       return {
         ...item,
         done: entry?.done ?? false,
         value: entry?.value ?? 0,
       }
     })
-  }, [baseAmalItems, customAmalItems, todayLog])
+  }, [mandatoryAmalItems, customAmalItems, todayLog])
 
-  // Compute real streak and last 7 days activity dots from persisted daily logs
+  // Compute real streak, 7-day dots, and cumulative Quran pages
   const { streakDays, last7DaysActive, totalTilawahPages } = useMemo(() => {
     const last7: boolean[] = []
     for (let offset = -6; offset <= 0; offset++) {
@@ -178,7 +236,6 @@ export default function App() {
     }
 
     let streak = 0
-    // Count consecutive days ending today (or yesterday if today hasn't started yet)
     const startOffset = hasCompletedAny(dailyLogs[todayIso]) ? 0 : -1
     for (let offset = startOffset; offset >= -365; offset--) {
       const iso = getLocalIsoDate(offset)
@@ -206,6 +263,19 @@ export default function App() {
     } catch {}
   }
 
+  const handleTogglePrayer = (prayer: MandatoryPrayerKey) => {
+    updateTodayEntry('sholat', (prev) => {
+      const current = { ...EMPTY_PRAYER_CHECKS, ...(prev.prayers || {}) }
+      return {
+        ...prev,
+        prayers: {
+          ...current,
+          [prayer]: !current[prayer],
+        },
+      }
+    })
+  }
+
   const handleToggleCheck = (id: string) => {
     updateTodayEntry(id, (prev) => ({ ...prev, done: !prev.done }))
   }
@@ -221,12 +291,51 @@ export default function App() {
     updateTodayEntry(id, (prev) => ({ ...prev, value: Math.max(0, value) }))
   }
 
-  const handleAddCustomAmal = (newItem: Omit<AmalItem, 'id'>) => {
-    const item: AmalItem = {
-      ...newItem,
-      id: `custom_${Date.now()}`,
-    }
-    const updated = [...customAmalItems, item]
+  const handleOpenAddAmal = () => {
+    setEditingAmal(null)
+    setAmalModalOpen(true)
+  }
+
+  const handleOpenEditAmal = (item: AmalItem) => {
+    if (item.isLocked) return
+    setEditingAmal(item)
+    setAmalModalOpen(true)
+  }
+
+  const handleSaveCustomAmal = (data: {
+    id?: string
+    name: string
+    type: CustomAmalType
+    target?: number
+    unit?: string
+  }) => {
+    const icon = inferAmalIcon(data.name, data.type)
+    const updated = data.id
+      ? customAmalItems.map((item) =>
+          item.id === data.id
+            ? {
+                ...item,
+                name: data.name,
+                type: data.type,
+                target: data.target,
+                unit: data.unit,
+                icon,
+              }
+            : item
+        )
+      : [
+          ...customAmalItems,
+          {
+            id: `custom_${Date.now()}`,
+            name: data.name,
+            type: data.type,
+            target: data.target,
+            unit: data.unit,
+            icon,
+            isCustom: true,
+          },
+        ]
+
     setCustomAmalItems(updated)
     try {
       localStorage.setItem('mizany_custom_amal', JSON.stringify(updated))
@@ -268,6 +377,18 @@ export default function App() {
       {/* Onboarding Overlay */}
       {showOnboarding && <Onboarding onComplete={handleCompleteOnboarding} />}
 
+      {/* Add / Edit Amal Modal */}
+      <AmalFormModal
+        isOpen={amalModalOpen}
+        editingItem={editingAmal}
+        onClose={() => {
+          setAmalModalOpen(false)
+          setEditingAmal(null)
+        }}
+        onSave={handleSaveCustomAmal}
+        onDelete={handleDeleteCustomAmal}
+      />
+
       {/* Main Container */}
       <main className="max-w-md mx-auto min-h-screen px-4 pt-2 sm:pt-4 pb-20 relative z-10">
         <div key={activeTab} className="view-enter">
@@ -302,10 +423,12 @@ export default function App() {
 
               <AmalChecklist
                 items={hydratedItems}
+                onTogglePrayer={handleTogglePrayer}
                 onToggleCheck={handleToggleCheck}
                 onIncrementCounter={handleIncrementCounter}
                 onUpdateValue={handleUpdateValue}
-                onOpenAddAmal={() => setActiveTab('atur')}
+                onOpenAddAmal={handleOpenAddAmal}
+                onEditAmal={handleOpenEditAmal}
               />
             </div>
           )}
@@ -335,7 +458,8 @@ export default function App() {
               tilawahTarget={tilawahTarget}
               onChangeTilawahTarget={handleChangeTilawahTarget}
               customAmalItems={customAmalItems}
-              onAddCustomAmal={handleAddCustomAmal}
+              onOpenAddAmal={handleOpenAddAmal}
+              onEditAmal={handleOpenEditAmal}
               onDeleteCustomAmal={handleDeleteCustomAmal}
               onReplayOnboarding={() => setShowOnboarding(true)}
             />
