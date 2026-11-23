@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --bg: #FFFFFF;
+  --card: rgba(255, 255, 255, 0.90);
+  --card-solid: #FFFFFF;
+  --card-2: rgba(139, 160, 243, 0.12);
+  --line: rgba(16, 24, 40, 0.08);
+  --line-strong: rgba(82, 82, 82, 0.32);
+  --glass: rgba(255, 255, 255, 0.90);
+  --glass-strong: rgba(255, 255, 255, 0.92);
+  --glass-border: rgba(255, 255, 255, 0.85);
+  --glass-line: rgba(16, 24, 40, 0.07);
+  --glass-shadow: 0 6px 20px rgba(25, 65, 181, 0.05), 0 1px 4px rgba(16, 24, 40, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --glass-shadow-sm: 0 3px 10px rgba(25, 65, 181, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --glass-blur: blur(14px) saturate(140%);
+  --blue: #0F50BD;
+  --blue-deep: #1941B5;
+  --blue-ink: #101828;
+  --ink: #101828;
+  --muted: #525252;
+  --muted-2: rgba(82, 82, 82, 0.75);
+  --peri: #8BA0F3;
+  --teal: #14B8A6;
+  --amber: #F59E0B;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100dvh;
+  background:
+    radial-gradient(720px 300px at 50% -80px, rgba(139, 160, 243, 0.10), rgba(139, 160, 243, 0) 70%),
+    linear-gradient(180deg, #F7F9FF 0%, #FFFFFF 180px, #FFFFFF 100%);
+  background-attachment: fixed;
+  color: #101828;
+  font-family: "Poppins", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Glass card utility */
+.glass-card {
+  background: rgba(255, 255, 255, 0.90);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 6px 20px rgba(25, 65, 181, 0.05), 0 1px 4px rgba(16, 24, 40, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  border-radius: 18px;
+}
+
+.glass-card-sm {
+  background: rgba(255, 255, 255, 0.90);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 3px 10px rgba(25, 65, 181, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border-radius: 14px;
+}
