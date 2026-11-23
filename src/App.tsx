@@ -12,6 +12,7 @@ import { AturView } from './views/AturView'
 import { PrayerView } from './views/PrayerView'
 import { Onboarding } from './components/Onboarding'
 import { fetchPrayerTimes, PrayerSchedule } from './services/prayerService'
+import { fetchHijriHeroData, HijriHeroData } from './services/hijriService'
 
 const DEFAULT_AMAL: AmalItem[] = [
   { id: 'puasa', name: 'Puasa', note: 'Sejak Subuh tadi', icon: 'sun', type: 'checklist', done: true },
@@ -32,6 +33,7 @@ export default function App() {
   const [customAmalItems, setCustomAmalItems] = useState<AmalItem[]>([])
   const [showOnboarding, setShowOnboarding] = useState<boolean>(false)
   const [prayerSchedule, setPrayerSchedule] = useState<PrayerSchedule | null>(null)
+  const [hijriData, setHijriData] = useState<HijriHeroData | null>(null)
 
   // Initialize settings from localStorage safely
   useEffect(() => {
@@ -73,6 +75,19 @@ export default function App() {
       clearInterval(interval)
     }
   }, [city])
+
+  // Fetch official Kemenag RI (MABIMS) Hijri calendar data
+  useEffect(() => {
+    let isMounted = true
+    fetchHijriHeroData().then((data) => {
+      if (isMounted && data) {
+        setHijriData(data)
+      }
+    })
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const handleCompleteOnboarding = () => {
     setShowOnboarding(false)
@@ -172,7 +187,9 @@ export default function App() {
                 nextPrayerName={prayerSchedule?.nextPrayer?.name}
                 nextPrayerTime={prayerSchedule?.nextPrayer?.time}
                 remainingTime={prayerSchedule?.nextPrayer?.remaining}
+                hijriData={hijriData}
                 onOpenPrayerDetail={() => setActiveTab('prayer')}
+                onOpenCalendar={() => setActiveTab('kalender')}
               />
 
               <QuickActions

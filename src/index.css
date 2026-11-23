@@ -162,3 +162,28 @@ body {
   stroke-dashoffset: var(--arc-offset);
   animation: arcTipForwardEcho 3.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
+
+/* 3D Hero Card Flip (Prayer <-> Kalender Hijriah MABIMS) */
+.hero-flip-scene {
+  perspective: 1400px;
+}
+
+.hero-flip-inner {
+  display: grid;
+  transform-style: preserve-3d;
+  transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hero-flip-inner.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.hero-flip-face {
+  grid-area: 1 / 1;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.hero-flip-back {
+  transform: rotateY(180deg);
+}
