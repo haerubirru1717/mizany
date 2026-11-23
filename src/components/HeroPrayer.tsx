@@ -82,6 +82,20 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
               <stop offset="55%" stopColor="#0F50BD" />
               <stop offset="100%" stopColor="#14B8A6" />
             </linearGradient>
+            <filter id="arcShimmerBlur" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="2.5" />
+            </filter>
+            <mask id="arcFillMask">
+              <path
+                d="M28 156 A122 122 0 0 1 272 156"
+                stroke="#FFFFFF"
+                strokeWidth="17"
+                strokeLinecap="round"
+                strokeDasharray="384"
+                strokeDashoffset={animatedOffset}
+                className="transition-all duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+              />
+            </mask>
           </defs>
           {/* Base track */}
           <path
@@ -90,7 +104,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
             strokeWidth="17"
             strokeLinecap="round"
           />
-          {/* Active progress track with loading sweep & pulse */}
+          {/* Active progress track */}
           <path
             d="M28 156 A122 122 0 0 1 272 156"
             stroke="url(#heroGrad)"
@@ -98,8 +112,28 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
             strokeLinecap="round"
             strokeDasharray="384"
             strokeDashoffset={animatedOffset}
-            className="arc-pulse transition-all duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+            className="transition-all duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
           />
+          {/* Flowing shimmer beam clipped strictly inside active progress pipe */}
+          <g mask="url(#arcFillMask)">
+            <path
+              d="M28 156 A122 122 0 0 1 272 156"
+              stroke="rgba(255, 255, 255, 0.5)"
+              strokeWidth="15"
+              strokeLinecap="round"
+              strokeDasharray="72 460"
+              filter="url(#arcShimmerBlur)"
+              className="arc-shimmer"
+            />
+            <path
+              d="M28 156 A122 122 0 0 1 272 156"
+              stroke="rgba(255, 255, 255, 0.72)"
+              strokeWidth="6"
+              strokeLinecap="round"
+              strokeDasharray="32 500"
+              className="arc-shimmer"
+            />
+          </g>
         </svg>
 
         {/* Text inside arc */}

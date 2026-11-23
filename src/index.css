@@ -76,16 +76,24 @@ body {
   animation: viewFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Subtle breathing glow on the active arc tip */
-@keyframes arcGlow {
-  0%, 100% {
-    filter: drop-shadow(0 0 3px rgba(20, 184, 166, 0.5));
+/* Flowing shimmer light sweep inside the progress arc (hulu -> hilir) */
+@keyframes arcShimmerFlow {
+  0% {
+    stroke-dashoffset: 90;
+    opacity: 0;
   }
-  50% {
-    filter: drop-shadow(0 0 9px rgba(20, 184, 166, 0.9));
+  12% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: -400;
+    opacity: 0;
   }
 }
 
-.arc-pulse {
-  animation: arcGlow 2.8s ease-in-out infinite;
+.arc-shimmer {
+  animation: arcShimmerFlow 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
