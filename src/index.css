@@ -138,3 +138,43 @@ body {
   animation: arcWipeColor 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   animation-delay: 1.4s;
 }
+
+/* Minimalist beacon ripple at the downstream tip (ujung hilir) synced with wave arrival */
+@keyframes arcTipRipple {
+  0%, 26% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  32% {
+    transform: scale(1.05);
+    opacity: 0.65;
+  }
+  68% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+@keyframes arcTipDot {
+  0%, 26%, 56%, 100% {
+    transform: scale(1);
+  }
+  38% {
+    transform: scale(1.16);
+  }
+}
+
+.arc-tip-ripple {
+  opacity: 0;
+  animation: arcTipRipple 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: 1.4s;
+}
+
+.arc-tip-dot {
+  animation: arcTipDot 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: 1.4s;
+}

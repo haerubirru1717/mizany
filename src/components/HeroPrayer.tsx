@@ -21,12 +21,19 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
   remainingTime = '02:41:09',
   onOpenPrayerDetail,
 }) => {
+  const targetOffset = 115
   const [animatedOffset, setAnimatedOffset] = useState(384)
+  const isArcReady = animatedOffset < 384
+
+  const progress = Math.max(0, Math.min(1, (384 - targetOffset) / 384))
+  const angle = Math.PI * (1 - progress)
+  const tipX = 150 + 122 * Math.cos(angle)
+  const tipY = 156 - 122 * Math.sin(angle)
 
   useEffect(() => {
     // Animate arc sweeping from 0 to target progress smoothly
     const timer = setTimeout(() => {
-      setAnimatedOffset(115)
+      setAnimatedOffset(targetOffset)
     }, 150)
     return () => clearTimeout(timer)
   }, [])
@@ -128,6 +135,30 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
               strokeLinecap="round"
               strokeDasharray="384"
               className="arc-wave-color"
+            />
+          </g>
+          {/* Minimalist beacon indicator at the downstream tip (ujung hilir) */}
+          <g
+            transform={`translate(${tipX}, ${tipY})`}
+            className={`transition-opacity duration-500 delay-[1150ms] ${
+              isArcReady ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <circle
+              cx="0"
+              cy="0"
+              r="6"
+              fill="none"
+              stroke="#FFFFFF"
+              strokeWidth="2"
+              className="arc-tip-ripple"
+            />
+            <circle
+              cx="0"
+              cy="0"
+              r="4.2"
+              fill="#FFFFFF"
+              className="arc-tip-dot"
             />
           </g>
         </svg>
