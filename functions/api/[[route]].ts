@@ -15,18 +15,89 @@ app.get('/health', (c) => {
   })
 })
 
-// Endpoint proxy & cache untuk API Aladhan (Metode Kemenag RI method=20)
+// Helper untuk mencocokkan nama kota Indonesia paling akurat dari hasil MyQuran Kemenag
+function pickBestIndonesianCity(items: Array<{ id: string; lokasi: string }>, query: string) {
+  const norm = query.trim().toUpperCase().replace(/\s+/g, ' ')
+  const withoutPrefix = norm.replace(/^(KOTA|KAB\.?)\s+/, '')
+
+  return (
+    items.find((it) => it.lokasi === norm) ||
+    items.find((it) => it.lokasi === `KOTA ${withoutPrefix}`) ||
+    items.find((it) => it.lokasi === `KAB. ${withoutPrefix}`) ||
+    items.find((it) => new RegExp(`\\b${withoutPrefix}\\b`).test(it.lokasi) && it.lokasi.startsWith('KOTA ')) ||
+    items.find((it) => new RegExp(`\\b${withoutPrefix}\\b`).test(it.lokasi)) ||
+    items[0]
+  )
+}
+
+function getJakartaDateParts() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const year = parts.find((p) => p.type === 'year')?.value || '2026'
+  const month = parts.find((p) => p.type === 'month')?.value || '11'
+  const day = parts.find((p) => p.type === 'day')?.value || '23'
+  return { year, month, day, iso: `${year}-${month}-${day}` }
+}
+
+// Endpoint Jadwal Sholat resmi Bimas Islam Kemenag RI via api.myquran.com
 app.get('/prayer-times', async (c) => {
-  const city = c.req.query('city') || 'Kota Tangerang'
+  const city = (c.req.query('city') || 'Kota Tangerang').trim()
+  const keyword = city.replace(/^(Kota|Kab\.?)\s+/i, '').trim()
+
   try {
-    const response = await fetch(
-      `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(city)}&country=Indonesia&method=20`
+    const searchRes = await fetch(
+      `https://api.myquran.com/v2/sholat/kota/cari/${encodeURIComponent(keyword)}`
     )
-    if (!response.ok) {
-      return c.json({ error: 'Gagal mengambil jadwal sholat dari API Aladhan' }, 502)
+    if (!searchRes.ok) {
+      return c.json({ error: 'Gagal mencari kota di API Kemenag (MyQuran)' }, 502)
     }
-    const data = await response.json()
-    return c.json(data)
+    const searchJson: any = await searchRes.json()
+    const candidates: Array<{ id: string; lokasi: string }> = Array.isArray(searchJson?.data)
+      ? searchJson.data
+      : []
+
+    if (candidates.length === 0) {
+      return c.json({ error: `Kota "${city}" tidak ditemukan di data Kemenag` }, 404)
+    }
+
+    const matched = pickBestIndonesianCity(candidates, city)
+    const { year, month, day, iso } = getJakartaDateParts()
+
+    const jadwalRes = await fetch(
+      `https://api.myquran.com/v2/sholat/jadwal/${matched.id}/${year}/${month}/${day}`
+    )
+    if (!jadwalRes.ok) {
+      return c.json({ error: 'Gagal mengambil jadwal sholat dari API Kemenag (MyQuran)' }, 502)
+    }
+    const jadwalJson: any = await jadwalRes.json()
+    const j = jadwalJson?.data?.jadwal
+
+    if (!j) {
+      return c.json({ error: 'Format jadwal sholat Kemenag tidak valid' }, 502)
+    }
+
+    c.header('Cache-Control', 'public, max-age=1800')
+    return c.json({
+      source: 'myquran-kemenag',
+      cityId: String(jadwalJson.data.id || matched.id),
+      lokasi: jadwalJson.data.lokasi || matched.lokasi,
+      daerah: jadwalJson.data.daerah || 'INDONESIA',
+      date: j.date || iso,
+      jadwal: {
+        imsak: j.imsak,
+        subuh: j.subuh,
+        terbit: j.terbit,
+        dhuha: j.dhuha,
+        dzuhur: j.dzuhur,
+        ashar: j.ashar,
+        maghrib: j.maghrib,
+        isya: j.isya,
+      },
+    })
   } catch (err: any) {
     return c.json({ error: err.message || 'Server error' }, 500)
   }

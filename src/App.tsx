@@ -182,7 +182,6 @@ export default function App() {
             <div className="space-y-2">
               <HeroPrayer
                 city={city}
-                hijriDate={prayerSchedule?.hijriDate}
                 gregorianDate={prayerSchedule?.gregorianDate}
                 nextPrayerName={prayerSchedule?.nextPrayer?.name}
                 nextPrayerTime={prayerSchedule?.nextPrayer?.time}
@@ -238,7 +237,11 @@ export default function App() {
 
           {/* VIEW: PRAYER DETAIL */}
           {activeTab === 'prayer' && (
-            <PrayerView city={city} onBack={() => setActiveTab('beranda')} />
+            <PrayerView
+              city={city}
+              prayerSchedule={prayerSchedule}
+              onBack={() => setActiveTab('beranda')}
+            />
           )}
         </div>
       </main>

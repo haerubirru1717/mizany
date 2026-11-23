@@ -1,22 +1,31 @@
 import React from 'react'
-import { ArrowLeft, Clock, MapPin, Sparkles, AlertCircle } from 'lucide-react'
+import { ArrowLeft, MapPin, AlertCircle } from 'lucide-react'
+import { PrayerSchedule } from '../services/prayerService'
 
 interface PrayerViewProps {
   city: string
+  prayerSchedule?: PrayerSchedule | null
   onBack: () => void
 }
 
-export const PrayerView: React.FC<PrayerViewProps> = ({ city, onBack }) => {
+export const PrayerView: React.FC<PrayerViewProps> = ({ city, prayerSchedule, onBack }) => {
+  const t = prayerSchedule?.timings
+  const nextId = prayerSchedule?.nextPrayer?.id
+
   const prayerDetails = [
-    { name: 'Imsak', time: '04:28', note: '10 menit sebelum Subuh', passed: true },
-    { name: 'Subuh', time: '04:38', note: 'Mulai puasa harian', passed: true },
-    { name: 'Terbit', time: '05:53', note: 'Matahari terbit (syuruq)', passed: true, forbidden: true },
-    { name: 'Dhuha', time: '06:20', note: 'Mulai waktu sholat Dhuha', passed: true },
-    { name: 'Dzuhur', time: '12:05', note: 'Matahari tergelincir', passed: true },
-    { name: 'Ashar', time: '15:19', note: 'Bayangan sama panjang', passed: true },
-    { name: 'Maghrib', time: '18:07', note: 'Waktu berbuka puasa', isNext: true },
-    { name: 'Isya', time: '19:19', note: 'Dilanjutkan Sholat Tarawih & Witir' },
+    { id: 'imsak', name: 'Imsak', time: t?.imsak || '04:28', note: '10 menit sebelum Subuh' },
+    { id: 'subuh', name: 'Subuh', time: t?.subuh || '04:38', note: 'Mulai puasa harian' },
+    { id: 'terbit', name: 'Terbit', time: t?.terbit || '05:53', note: 'Matahari terbit (syuruq)', forbidden: true },
+    { id: 'dhuha', name: 'Dhuha', time: t?.dhuha || '06:20', note: 'Mulai waktu sholat Dhuha' },
+    { id: 'dzuhur', name: 'Dzuhur', time: t?.dzuhur || '12:05', note: 'Matahari tergelincir' },
+    { id: 'ashar', name: 'Ashar', time: t?.ashar || '15:19', note: 'Bayangan sama panjang' },
+    { id: 'maghrib', name: 'Maghrib', time: t?.maghrib || '18:07', note: 'Waktu berbuka puasa' },
+    { id: 'isya', name: 'Isya', time: t?.isya || '19:19', note: 'Dilanjutkan Sholat Tarawih & Witir' },
   ]
+
+  const nextName = prayerSchedule?.nextPrayer?.name || 'Maghrib'
+  const nextTime = prayerSchedule?.nextPrayer?.time || '18:07'
+  const nextRemaining = prayerSchedule?.nextPrayer?.remainingLabel || 'Menghitung sisa waktu...'
 
   return (
     <div className="space-y-4 pb-24">
@@ -36,7 +45,7 @@ export const PrayerView: React.FC<PrayerViewProps> = ({ city, onBack }) => {
             <MapPin size={13} className="text-[#0F50BD]" />
             <span>{city}</span>
             <span>•</span>
-            <span>Kemenag RI</span>
+            <span>Bimas Islam Kemenag RI</span>
           </div>
         </div>
       </div>
@@ -48,46 +57,49 @@ export const PrayerView: React.FC<PrayerViewProps> = ({ city, onBack }) => {
             Sholat Berikutnya
           </span>
           <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-bold">
-            Maghrib
+            {nextName}
           </span>
         </div>
-        <div className="mt-2 text-3xl font-extrabold">18:07 WIB</div>
-        <p className="text-xs text-white/80 mt-1">Waktu berbuka puasa · Kurang lebih 2 jam 41 menit lagi</p>
+        <div className="mt-2 text-3xl font-extrabold">{nextTime}</div>
+        <p className="text-xs text-white/80 mt-1">{nextRemaining}</p>
       </div>
 
       {/* Detailed Prayer List */}
       <div className="glass-card divide-y divide-black/[0.05] overflow-hidden">
-        {prayerDetails.map((item) => (
-          <div
-            key={item.name}
-            className={`p-4 flex items-center justify-between transition-colors ${
-              item.isNext ? 'bg-[#0F50BD]/5' : ''
-            }`}
-          >
-            <div>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-bold ${item.isNext ? 'text-[#0F50BD]' : 'text-[#101828]'}`}>
-                  {item.name}
-                </span>
-                {item.isNext && (
-                  <span className="px-2 py-0.5 rounded-full bg-[#0F50BD] text-white text-[10px] font-bold">
-                    Berikutnya
+        {prayerDetails.map((item) => {
+          const isNext = item.id === nextId
+          return (
+            <div
+              key={item.id}
+              className={`p-4 flex items-center justify-between transition-colors ${
+                isNext ? 'bg-[#0F50BD]/5' : ''
+              }`}
+            >
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm font-bold ${isNext ? 'text-[#0F50BD]' : 'text-[#101828]'}`}>
+                    {item.name}
                   </span>
-                )}
-                {item.forbidden && (
-                  <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[10px] font-semibold">
-                    Larangan Sholat
-                  </span>
-                )}
+                  {isNext && (
+                    <span className="px-2 py-0.5 rounded-full bg-[#0F50BD] text-white text-[10px] font-bold">
+                      Berikutnya
+                    </span>
+                  )}
+                  {item.forbidden && (
+                    <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[10px] font-semibold">
+                      Larangan Sholat
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-[#525252] mt-0.5">{item.note}</div>
               </div>
-              <div className="text-xs text-[#525252] mt-0.5">{item.note}</div>
-            </div>
 
-            <div className={`text-base font-bold ${item.isNext ? 'text-[#0F50BD]' : 'text-[#101828]'}`}>
-              {item.time}
+              <div className={`text-base font-bold ${isNext ? 'text-[#0F50BD]' : 'text-[#101828]'}`}>
+                {item.time}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Note Waktu Tahrim */}

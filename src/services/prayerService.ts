@@ -1,7 +1,21 @@
+export interface PrayerTimingsRaw {
+  imsak: string
+  subuh: string
+  terbit: string
+  dhuha: string
+  dzuhur: string
+  ashar: string
+  maghrib: string
+  isya: string
+}
+
 export interface PrayerSchedule {
+  source: string
   city: string
-  hijriDate: string
+  lokasi?: string
+  daerah?: string
   gregorianDate: string
+  timings: PrayerTimingsRaw
   prayers: {
     id: string
     name: string
@@ -10,57 +24,55 @@ export interface PrayerSchedule {
     isPassed?: boolean
   }[]
   nextPrayer: {
+    id: string
     name: string
     time: string
     remaining: string
+    remainingLabel: string
   }
 }
 
+interface CachedPrayerData {
+  source: string
+  city: string
+  lokasi?: string
+  daerah?: string
+  gregorianDate: string
+  timings: PrayerTimingsRaw
+}
+
+const memoryCache = new Map<string, CachedPrayerData>()
+
 export async function fetchPrayerTimes(city: string): Promise<PrayerSchedule | null> {
   try {
-    const todayStr = new Date().toISOString().split('T')[0]
-    const cacheKey = `mizany_prayer_${city}_${todayStr}`
+    const todayStr = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD local date
+    const cacheKey = `mizany_kemenag_prayer_${city}_${todayStr}`
 
-    // 1. Check local cache first
-    const cached = localStorage.getItem(cacheKey)
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached)
-        return calculateNextPrayer(parsed)
-      } catch {}
+    // 1. Check in-memory cache first (zero-overhead for 1-second countdown ticks)
+    const inMem = memoryCache.get(cacheKey)
+    if (inMem) {
+      return calculateNextPrayer(inMem)
     }
 
-    // 2. Fetch from Hono edge API
+    // 2. Check localStorage cache
+    try {
+      const cached = localStorage.getItem(cacheKey)
+      if (cached) {
+        const parsed: CachedPrayerData = JSON.parse(cached)
+        if (parsed?.timings?.subuh) {
+          memoryCache.set(cacheKey, parsed)
+          return calculateNextPrayer(parsed)
+        }
+      }
+    } catch {}
+
+    // 3. Fetch from Hono edge API (Bimas Islam Kemenag RI via MyQuran)
     const res = await fetch(`/api/prayer-times?city=${encodeURIComponent(city)}`)
     if (!res.ok) throw new Error('Failed to fetch prayer times')
 
     const json: any = await res.json()
-    const timings = json?.data?.timings
-    const date = json?.data?.date
-
-    if (!timings) return null
-
-    const hijri = date?.hijri
-    const HIJRI_MONTHS_ID: Record<number, string> = {
-      1: 'Muharram',
-      2: 'Safar',
-      3: 'Rabiul Awwal',
-      4: 'Rabiul Akhir',
-      5: 'Jumadil Awwal',
-      6: 'Jumadil Akhir',
-      7: 'Rajab',
-      8: 'Sya\'ban',
-      9: 'Ramadan',
-      10: 'Syawwal',
-      11: 'Dzulqa\'dah',
-      12: 'Dzulhijjah',
-    }
-
-    const monthNum = hijri?.month?.number || 9
-    const monthName = HIJRI_MONTHS_ID[monthNum] || hijri?.month?.en || 'Ramadan'
-    const hijriStr = hijri
-      ? `${hijri.day} ${monthName} ${hijri.year} H`
-      : '12 Ramadan 1448 H'
+    const j = json?.jadwal
+    if (!j?.subuh) return null
 
     const gregorianStr = new Date().toLocaleDateString('id-ID', {
       day: 'numeric',
@@ -68,21 +80,25 @@ export async function fetchPrayerTimes(city: string): Promise<PrayerSchedule | n
       year: 'numeric',
     })
 
-    const rawSchedule = {
+    const rawSchedule: CachedPrayerData = {
+      source: json.source || 'myquran-kemenag',
       city,
-      hijriDate: hijriStr,
+      lokasi: json.lokasi,
+      daerah: json.daerah,
       gregorianDate: gregorianStr,
       timings: {
-        subuh: timings.Fajr?.slice(0, 5) || '04:38',
-        terbit: timings.Sunrise?.slice(0, 5) || '05:53',
-        dzuhur: timings.Dhuhr?.slice(0, 5) || '12:05',
-        ashar: timings.Asr?.slice(0, 5) || '15:19',
-        maghrib: timings.Maghrib?.slice(0, 5) || '18:07',
-        isya: timings.Isha?.slice(0, 5) || '19:19',
+        imsak: String(j.imsak || '04:28').slice(0, 5),
+        subuh: String(j.subuh || '04:38').slice(0, 5),
+        terbit: String(j.terbit || '05:53').slice(0, 5),
+        dhuha: String(j.dhuha || '06:20').slice(0, 5),
+        dzuhur: String(j.dzuhur || '12:05').slice(0, 5),
+        ashar: String(j.ashar || '15:19').slice(0, 5),
+        maghrib: String(j.maghrib || '18:07').slice(0, 5),
+        isya: String(j.isya || '19:19').slice(0, 5),
       },
     }
 
-    // Cache raw response
+    memoryCache.set(cacheKey, rawSchedule)
     try {
       localStorage.setItem(cacheKey, JSON.stringify(rawSchedule))
     } catch {}
@@ -94,9 +110,9 @@ export async function fetchPrayerTimes(city: string): Promise<PrayerSchedule | n
   }
 }
 
-function calculateNextPrayer(data: any): PrayerSchedule {
+function calculateNextPrayer(data: CachedPrayerData): PrayerSchedule {
   const now = new Date()
-  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const currentTotalSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
 
   const list = [
     { id: 'subuh', name: 'Subuh', time: data.timings.subuh },
@@ -109,38 +125,48 @@ function calculateNextPrayer(data: any): PrayerSchedule {
 
   let nextIdx = list.findIndex((p) => {
     const [h, m] = p.time.split(':').map(Number)
-    return h * 60 + m > currentMinutes
+    return h * 3600 + m * 60 > currentTotalSeconds
   })
 
-  if (nextIdx === -1) {
-    // Lewat Isya -> sholat berikutnya Subuh besok
+  const isTomorrow = nextIdx === -1
+  if (isTomorrow) {
     nextIdx = 0
   }
 
   const nextP = list[nextIdx]
   const [nh, nm] = nextP.time.split(':').map(Number)
-  let diffMinutes = nh * 60 + nm - currentMinutes
-  if (diffMinutes < 0) diffMinutes += 24 * 60 // besok
+  let diffSeconds = nh * 3600 + nm * 60 - currentTotalSeconds
+  if (diffSeconds <= 0) diffSeconds += 24 * 3600
 
-  const remHours = Math.floor(diffMinutes / 60)
-  const remMins = diffMinutes % 60
-  const remainingStr = `${String(remHours).padStart(2, '0')}:${String(remMins).padStart(2, '0')}:${String(59 - now.getSeconds()).padStart(2, '0')}`
+  const remHours = Math.floor(diffSeconds / 3600)
+  const remMins = Math.floor((diffSeconds % 3600) / 60)
+  const remSecs = diffSeconds % 60
+  const remainingStr = `${String(remHours).padStart(2, '0')}:${String(remMins).padStart(2, '0')}:${String(remSecs).padStart(2, '0')}`
+  const remainingLabel =
+    remHours > 0
+      ? `Kurang lebih ${remHours} jam ${remMins} menit lagi`
+      : `Kurang lebih ${remMins} menit lagi`
 
   const prayers = list.map((p, idx) => ({
     ...p,
     isNext: idx === nextIdx,
-    isPassed: idx < nextIdx,
+    isPassed: isTomorrow ? true : idx < nextIdx,
   }))
 
   return {
+    source: data.source,
     city: data.city,
-    hijriDate: data.hijriDate,
+    lokasi: data.lokasi,
+    daerah: data.daerah,
     gregorianDate: data.gregorianDate,
+    timings: data.timings,
     prayers,
     nextPrayer: {
+      id: nextP.id,
       name: nextP.name,
       time: nextP.time,
       remaining: remainingStr,
+      remainingLabel,
     },
   }
 }
