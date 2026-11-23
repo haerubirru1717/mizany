@@ -15,19 +15,73 @@ app.get('/health', (c) => {
   })
 })
 
+type KemenagCity = { id: string; lokasi: string }
+
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function formatIndonesianCityLabel(lokasi: string): string {
+  return lokasi
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) => {
+      if (word === 'kab.' || word === 'kab') return 'Kab.'
+      if (word === 'dki') return 'DKI'
+      if (word === 'di') return 'DI'
+      return word.charAt(0).toUpperCase() + word.slice(1)
+    })
+    .join(' ')
+}
+
+function normalizeCityQuery(query: string): string {
+  let norm = query
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, ' ')
+    .replace(/^KABUPATEN\s+/, 'KAB. ')
+    .replace(/^KAB\s+/, 'KAB. ')
+    .replace(/^KOTA\s+ADMINISTRASI\s+/, 'KOTA ')
+    .replace(/^DAERAH\s+KHUSUS\s+IBUKOTA\s+/, '')
+    .replace(/^DAERAH\s+ISTIMEWA\s+/, '')
+
+  if (/JAKARTA/i.test(norm) && !/SERIBU/i.test(norm)) {
+    norm = 'KOTA JAKARTA'
+  }
+  return norm
+}
+
 // Helper untuk mencocokkan nama kota Indonesia paling akurat dari hasil MyQuran Kemenag
-function pickBestIndonesianCity(items: Array<{ id: string; lokasi: string }>, query: string) {
-  const norm = query.trim().toUpperCase().replace(/\s+/g, ' ')
+function pickBestIndonesianCity(items: KemenagCity[], query: string): KemenagCity | undefined {
+  const norm = normalizeCityQuery(query)
   const withoutPrefix = norm.replace(/^(KOTA|KAB\.?)\s+/, '')
+  const wordRegex = new RegExp(`\\b${escapeRegex(withoutPrefix)}\\b`)
+  const wantsKab = norm.startsWith('KAB.')
+
+  if (wantsKab) {
+    return (
+      items.find((it) => it.lokasi === norm) ||
+      items.find((it) => it.lokasi === `KAB. ${withoutPrefix}`) ||
+      items.find((it) => wordRegex.test(it.lokasi) && it.lokasi.startsWith('KAB. ')) ||
+      items.find((it) => wordRegex.test(it.lokasi))
+    )
+  }
 
   return (
     items.find((it) => it.lokasi === norm) ||
     items.find((it) => it.lokasi === `KOTA ${withoutPrefix}`) ||
     items.find((it) => it.lokasi === `KAB. ${withoutPrefix}`) ||
-    items.find((it) => new RegExp(`\\b${withoutPrefix}\\b`).test(it.lokasi) && it.lokasi.startsWith('KOTA ')) ||
-    items.find((it) => new RegExp(`\\b${withoutPrefix}\\b`).test(it.lokasi)) ||
-    items[0]
+    items.find((it) => wordRegex.test(it.lokasi) && it.lokasi.startsWith('KOTA ')) ||
+    items.find((it) => wordRegex.test(it.lokasi))
   )
+}
+
+async function fetchAllKemenagCities(): Promise<KemenagCity[]> {
+  const res = await fetch('https://api.myquran.com/v2/sholat/kota/semua')
+  if (!res.ok) return []
+  const json: any = await res.json()
+  return Array.isArray(json?.data) ? json.data : []
 }
 
 function resolveIndonesianTimezone(daerah?: string): { timeZone: string; tzLabel: 'WIB' | 'WITA' | 'WIT' } {
@@ -54,10 +108,147 @@ function getDatePartsInZone(timeZone: string) {
   return { year, month, day, iso: `${year}-${month}-${day}` }
 }
 
+// Endpoint daftar seluruh Kab/Kota Indonesia resmi Kemenag RI (518 wilayah)
+app.get('/cities', async (c) => {
+  try {
+    const cities = await fetchAllKemenagCities()
+    if (cities.length === 0) {
+      return c.json({ error: 'Gagal memuat daftar kota Kemenag RI' }, 502)
+    }
+    const formatted = cities.map((it) => ({
+      id: it.id,
+      lokasi: it.lokasi,
+      label: formatIndonesianCityLabel(it.lokasi),
+    }))
+    c.header('Cache-Control', 'public, max-age=86400')
+    return c.json({ count: formatted.length, cities: formatted })
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Server error' }, 500)
+  }
+})
+
+// Endpoint deteksi otomatis Kab/Kota Kemenag RI berdasarkan koordinat GPS perangkat
+app.get('/locate-city', async (c) => {
+  const lat = Number(c.req.query('lat'))
+  const lon = Number(c.req.query('lon'))
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    return c.json({ error: 'Koordinat lokasi tidak valid' }, 400)
+  }
+
+  try {
+    const placeCandidates: string[] = []
+    let countryCode = ''
+
+    // Primary: OpenStreetMap Nominatim (paling akurat membedakan Kota vs Kabupaten di Indonesia)
+    try {
+      const nomRes = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(
+          String(lat)
+        )}&lon=${encodeURIComponent(String(lon))}&accept-language=id`,
+        {
+          headers: {
+            'User-Agent': 'MizanyApp/1.0 (+https://mizany.pages.dev)',
+            Accept: 'application/json',
+          },
+        }
+      )
+      if (nomRes.ok) {
+        const nomJson: any = await nomRes.json()
+        const addr = nomJson?.address || {}
+        countryCode = String(addr.country_code || '').toLowerCase()
+        const ordered = [
+          addr.county,
+          addr.city,
+          addr.regency,
+          addr.municipality,
+          addr.town,
+          addr.city_district,
+          addr.state_district,
+          addr.state,
+        ]
+        for (const item of ordered) {
+          if (typeof item === 'string' && item.trim()) {
+            placeCandidates.push(item.trim())
+          }
+        }
+      }
+    } catch {
+      // Lanjut ke fallback BigDataCloud
+    }
+
+    // Fallback: BigDataCloud free client reverse geocoder
+    if (placeCandidates.length === 0) {
+      const bdcRes = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(
+          String(lat)
+        )}&longitude=${encodeURIComponent(String(lon))}&localityLanguage=id`
+      )
+      if (bdcRes.ok) {
+        const bdcJson: any = await bdcRes.json()
+        countryCode = String(bdcJson?.countryCode || '').toLowerCase()
+        const adminList: Array<{ name?: string; adminLevel?: number }> = Array.isArray(
+          bdcJson?.localityInfo?.administrative
+        )
+          ? bdcJson.localityInfo.administrative
+          : []
+        const byAdminDesc = [...adminList]
+          .filter((a) => a.name && (a.adminLevel || 0) >= 4)
+          .sort((a, b) => (b.adminLevel || 0) - (a.adminLevel || 0))
+          .map((a) => a.name as string)
+
+        for (const item of [bdcJson?.city, bdcJson?.locality, ...byAdminDesc, bdcJson?.principalSubdivision]) {
+          if (typeof item === 'string' && item.trim()) {
+            placeCandidates.push(item.trim())
+          }
+        }
+      }
+    }
+
+    if (countryCode && countryCode !== 'id') {
+      return c.json(
+        { error: 'Lokasi terdeteksi di luar Indonesia. Silakan pilih kota Indonesia secara manual.' },
+        404
+      )
+    }
+
+    const allCities = await fetchAllKemenagCities()
+    if (allCities.length === 0) {
+      return c.json({ error: 'Gagal memuat data wilayah Kemenag RI' }, 502)
+    }
+
+    let matched: KemenagCity | undefined
+    for (const candidate of placeCandidates) {
+      const found = pickBestIndonesianCity(allCities, candidate)
+      if (found) {
+        matched = found
+        break
+      }
+    }
+
+    if (!matched) {
+      return c.json(
+        { error: 'Kota Kemenag tidak dapat dicocokkan dari lokasi perangkat. Pilih kota secara manual.' },
+        404
+      )
+    }
+
+    c.header('Cache-Control', 'no-store')
+    return c.json({
+      cityId: matched.id,
+      lokasi: matched.lokasi,
+      city: formatIndonesianCityLabel(matched.lokasi),
+      detectedPlace: placeCandidates[0] || matched.lokasi,
+    })
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Gagal mendeteksi lokasi' }, 500)
+  }
+})
+
 // Endpoint Jadwal Sholat resmi Bimas Islam Kemenag RI via api.myquran.com
 app.get('/prayer-times', async (c) => {
   const city = (c.req.query('city') || 'Kota Tangerang').trim()
-  const keyword = city.replace(/^(Kota|Kab\.?)\s+/i, '').trim()
+  const normalizedCity = normalizeCityQuery(city)
+  const keyword = normalizedCity.replace(/^(KOTA|KAB\.?)\s+/, '').trim()
 
   try {
     const searchRes = await fetch(
@@ -67,7 +258,7 @@ app.get('/prayer-times', async (c) => {
       return c.json({ error: 'Gagal mencari kota di API Kemenag (MyQuran)' }, 502)
     }
     const searchJson: any = await searchRes.json()
-    const candidates: Array<{ id: string; lokasi: string }> = Array.isArray(searchJson?.data)
+    const candidates: KemenagCity[] = Array.isArray(searchJson?.data)
       ? searchJson.data
       : []
 
@@ -75,7 +266,7 @@ app.get('/prayer-times', async (c) => {
       return c.json({ error: `Kota "${city}" tidak ditemukan di data Kemenag` }, 404)
     }
 
-    const matched = pickBestIndonesianCity(candidates, city)
+    const matched = pickBestIndonesianCity(candidates, city) || candidates[0]
     const initialDate = getDatePartsInZone('Asia/Jakarta')
 
     let jadwalRes = await fetch(

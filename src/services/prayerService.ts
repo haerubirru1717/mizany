@@ -328,3 +328,99 @@ export async function fetchPrayerTimes(city: string): Promise<PrayerSchedule | n
   if (!data) return null
   return computePrayerSchedule(data)
 }
+
+export interface IndonesianCityOption {
+  id: string
+  lokasi: string
+  label: string
+}
+
+const CITIES_STORAGE_KEY = 'mizany_kemenag_cities_v1'
+let cachedCityList: IndonesianCityOption[] | null = null
+
+export async function fetchAllIndonesianCities(): Promise<IndonesianCityOption[]> {
+  if (cachedCityList && cachedCityList.length > 0) return cachedCityList
+
+  try {
+    const raw = localStorage.getItem(CITIES_STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed) && parsed.length > 100) {
+        cachedCityList = parsed
+        return parsed
+      }
+    }
+  } catch {}
+
+  try {
+    const res = await fetch('/api/cities')
+    if (!res.ok) return []
+    const json: any = await res.json()
+    const list: IndonesianCityOption[] = Array.isArray(json?.cities) ? json.cities : []
+    if (list.length > 0) {
+      cachedCityList = list
+      try {
+        localStorage.setItem(CITIES_STORAGE_KEY, JSON.stringify(list))
+      } catch {}
+    }
+    return list
+  } catch {
+    return []
+  }
+}
+
+export interface DetectedCityResult {
+  city: string
+  lokasi: string
+  cityId: string
+  detectedPlace?: string
+}
+
+export function detectCityFromDeviceGeolocation(): Promise<DetectedCityResult> {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+      reject(new Error('Browser tidak mendukung deteksi lokasi perangkat.'))
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords
+          const res = await fetch(
+            `/api/locate-city?lat=${encodeURIComponent(String(latitude))}&lon=${encodeURIComponent(
+              String(longitude)
+            )}`
+          )
+          const json: any = await res.json().catch(() => ({}))
+          if (!res.ok || !json?.city) {
+            reject(new Error(json?.error || 'Gagal mencocokkan kota dari lokasi perangkat.'))
+            return
+          }
+          resolve({
+            city: json.city,
+            lokasi: json.lokasi,
+            cityId: String(json.cityId || ''),
+            detectedPlace: json.detectedPlace,
+          })
+        } catch {
+          reject(new Error('Gagal terhubung ke server untuk menentukan kota.'))
+        }
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          reject(new Error('Izin lokasi ditolak. Aktifkan izin lokasi di browser atau pilih kota manual.'))
+        } else if (err.code === err.TIMEOUT) {
+          reject(new Error('Waktu tunggu GPS habis. Coba lagi atau pilih kota manual.'))
+        } else {
+          reject(new Error('Lokasi perangkat tidak tersedia saat ini.'))
+        }
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 300000,
+      }
+    )
+  })
+}

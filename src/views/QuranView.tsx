@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { MosqueSkyline } from '../components/MosqueSkyline'
-import { Plus, Minus, Bookmark } from 'lucide-react'
+import { Plus, Minus, Bookmark, Link2 } from 'lucide-react'
 
 interface QuranViewProps {
   dailyTarget: number
   pagesReadToday: number
   totalPagesRead: number
   hijriDateLabel?: string
+  linkedAmalName?: string
   onChangePagesToday: (nextPages: number) => void
+  onAddToChecklist?: () => void
 }
 
 const TOTAL_MUSHAF_PAGES = 604
@@ -17,7 +19,9 @@ export const QuranView: React.FC<QuranViewProps> = ({
   pagesReadToday,
   totalPagesRead,
   hijriDateLabel,
+  linkedAmalName,
   onChangePagesToday,
+  onAddToChecklist,
 }) => {
   const [lastReadNote, setLastReadNote] = useState<string>('')
 
@@ -66,11 +70,11 @@ export const QuranView: React.FC<QuranViewProps> = ({
           </div>
 
           <div className="mt-3">
-            <div className="text-3xl font-extrabold">
+            <div className="text-3xl font-extrabold tabular-nums">
               {completedJuz}{' '}
               <span className="text-lg font-normal text-white/80">/ 30 Juz</span>
             </div>
-            <p className="text-xs text-white/80 mt-1">
+            <p className="text-xs text-white/80 mt-1 tabular-nums">
               {totalPagesRead} dari {TOTAL_MUSHAF_PAGES} halaman Mushaf ({khatamPercent}%)
             </p>
           </div>
@@ -85,11 +89,11 @@ export const QuranView: React.FC<QuranViewProps> = ({
         </div>
       </div>
 
-      {/* Today's Tilawah Stepper (Synced with Checklist) */}
+      {/* Today's Tilawah Stepper (Two-Way Synced with Beranda Checklist) */}
       <div className="glass-card p-5">
         <div className="flex items-baseline justify-between mb-3">
           <h3 className="text-base font-bold text-[#101828]">Tilawah Hari Ini</h3>
-          <span className="text-xs font-semibold text-[#525252]">
+          <span className="text-xs font-semibold text-[#525252] tabular-nums">
             Target: <span className="text-[#0F50BD] font-bold">{dailyTarget}</span> hal ({todayPercent}%)
           </span>
         </div>
@@ -105,7 +109,7 @@ export const QuranView: React.FC<QuranViewProps> = ({
           </button>
 
           <div className="text-center">
-            <div className="text-4xl font-extrabold text-[#0F50BD]">{pagesReadToday}</div>
+            <div className="text-4xl font-extrabold text-[#0F50BD] tabular-nums">{pagesReadToday}</div>
             <div className="text-xs font-medium text-[#525252] mt-1">halaman selesai</div>
           </div>
 
@@ -166,9 +170,30 @@ export const QuranView: React.FC<QuranViewProps> = ({
         </div>
       </div>
 
-      <p className="text-[11px] text-center text-[#525252]/80 mt-2">
-        Progres tilawah otomatis sinkron dengan checklist harian · Ubah target di Pengaturan
-      </p>
+      {/* Two-way checklist sync status */}
+      {linkedAmalName ? (
+        <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-[#0F766E] bg-teal-50/80 border border-teal-200/70 rounded-xl px-3 py-2">
+          <Link2 size={13} className="shrink-0" />
+          <span>
+            Tersinkron dua arah dengan checklist Beranda: <b>{linkedAmalName}</b>
+          </span>
+        </div>
+      ) : (
+        <div className="glass-card p-3.5 flex items-center justify-between gap-2.5">
+          <p className="text-[11px] text-[#525252] leading-snug">
+            Tercatat ke progres khatam & streak. Ingin tampil juga di Checklist Beranda?
+          </p>
+          {onAddToChecklist && (
+            <button
+              type="button"
+              onClick={onAddToChecklist}
+              className="px-3 py-1.5 rounded-full bg-[#0F50BD]/10 text-[#0F50BD] text-[11px] font-bold hover:bg-[#0F50BD]/20 shrink-0 cursor-pointer transition-colors"
+            >
+              + Checklist
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import {
   TabKey,
   AmalItem,
@@ -22,6 +22,7 @@ import { StreakCelebration } from './components/StreakCelebration'
 import {
   CachedPrayerData,
   computePrayerSchedule,
+  detectCityFromDeviceGeolocation,
   getDateIsoInTimezone,
   loadCityPrayerData,
   PrayerSchedule,
@@ -35,8 +36,16 @@ type DailyLogEntry = {
 }
 type DailyLogsByDate = Record<string, Record<string, DailyLogEntry>>
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
+
 const DAILY_LOGS_STORAGE_KEY = 'mizany_daily_logs_v1'
 const STREAK_CELEBRATED_KEY = 'mizany_streak_celebrated_date'
+const CITY_MODE_STORAGE_KEY = 'mizany_city_mode_v1'
+const GEO_DECLINED_STORAGE_KEY = 'mizany_geo_declined_v1'
+const PAGES_PER_JUZ = 20
 
 const EMPTY_PRAYER_CHECKS: PrayerChecks = {
   subuh: false,
@@ -71,9 +80,61 @@ function inferAmalIcon(name: string, type: CustomAmalType): string {
   return 'star'
 }
 
+function findLinkedQuranAmal(items: AmalItem[]): AmalItem | undefined {
+  return items.find(
+    (item) =>
+      (item.type === 'target' || item.type === 'counter' || item.type === 'checklist') &&
+      /qur|tilawah|tadarus|mushaf|ngaji|mengaji/i.test(item.name)
+  )
+}
+
+function isJuzUnit(unit?: string): boolean {
+  return /juz/i.test(unit || '')
+}
+
+function isPageUnit(unit?: string): boolean {
+  return /hal|lembar|page/i.test(unit || '')
+}
+
+function pagesToLinkedEntry(
+  item: AmalItem,
+  pages: number,
+  effectiveTargetPages: number
+): DailyLogEntry {
+  const safePages = Math.max(0, pages)
+  if (item.type === 'checklist') {
+    return { done: safePages >= Math.max(1, effectiveTargetPages) }
+  }
+  if (isJuzUnit(item.unit)) {
+    return { value: Math.round((safePages / PAGES_PER_JUZ) * 10) / 10 }
+  }
+  return { value: safePages }
+}
+
+function linkedEntryToPages(
+  item: AmalItem,
+  entry: DailyLogEntry,
+  effectiveTargetPages: number
+): number {
+  if (item.type === 'checklist') {
+    return entry.done ? Math.max(1, effectiveTargetPages) : 0
+  }
+  const val = Math.max(0, entry.value || 0)
+  if (isJuzUnit(item.unit)) {
+    return Math.round(val * PAGES_PER_JUZ)
+  }
+  return Math.round(val)
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>('beranda')
   const [city, setCity] = useState<string>('Kota Tangerang')
+  const [cityMode, setCityMode] = useState<'auto' | 'manual'>('auto')
+  const [isLocatingCity, setIsLocatingCity] = useState<boolean>(false)
+  const [locationMessage, setLocationMessage] = useState<string | null>(null)
+  const [locationError, setLocationError] = useState<string | null>(null)
+  const [isHydrated, setIsHydrated] = useState<boolean>(false)
+
   const [tilawahTarget, setTilawahTarget] = useState<number>(20)
   const [customAmalItems, setCustomAmalItems] = useState<AmalItem[]>([])
   const [dailyLogs, setDailyLogs] = useState<DailyLogsByDate>({})
@@ -81,11 +142,17 @@ export default function App() {
   const [prayerSchedule, setPrayerSchedule] = useState<PrayerSchedule | null>(null)
   const [hijriData, setHijriData] = useState<HijriHeroData | null>(null)
 
+  // PWA Install state
+  const [deferredInstallPrompt, setDeferredInstallPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null)
+  const [isPwaInstalled, setIsPwaInstalled] = useState<boolean>(false)
+
   // Modal state for Add / Edit custom amal & Streak celebration
   const [amalModalOpen, setAmalModalOpen] = useState<boolean>(false)
   const [editingAmal, setEditingAmal] = useState<AmalItem | null>(null)
   const [showStreakModal, setShowStreakModal] = useState<boolean>(false)
 
+  const hasAutoLocatedRef = useRef<boolean>(false)
   const todayIso = getLocalIsoDate(0)
 
   // Initialize persisted settings & real daily logs from localStorage
@@ -98,6 +165,11 @@ export default function App() {
       const storedCity = localStorage.getItem('mizany_city')
       if (storedCity) setCity(storedCity)
 
+      const storedMode = localStorage.getItem(CITY_MODE_STORAGE_KEY)
+      if (storedMode === 'manual' || storedMode === 'auto') {
+        setCityMode(storedMode)
+      }
+
       const storedTarget = localStorage.getItem('mizany_tilawah_target')
       if (storedTarget) setTilawahTarget(Number(storedTarget))
 
@@ -108,8 +180,81 @@ export default function App() {
       if (storedLogs) setDailyLogs(JSON.parse(storedLogs))
     } catch {
       // Ignore storage errors in sandbox
+    } finally {
+      setIsHydrated(true)
     }
   }, [])
+
+  // Detect installed standalone mode & listen for Android Chrome PWA install prompt
+  useEffect(() => {
+    const standalone =
+      window.matchMedia?.('(display-mode: standalone)').matches ||
+      (navigator as unknown as { standalone?: boolean }).standalone === true
+    setIsPwaInstalled(Boolean(standalone))
+
+    const onBeforeInstall = (e: Event) => {
+      e.preventDefault()
+      setDeferredInstallPrompt(e as BeforeInstallPromptEvent)
+    }
+    const onAppInstalled = () => {
+      setIsPwaInstalled(true)
+      setDeferredInstallPrompt(null)
+    }
+
+    window.addEventListener('beforeinstallprompt', onBeforeInstall)
+    window.addEventListener('appinstalled', onAppInstalled)
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstall)
+      window.removeEventListener('appinstalled', onAppInstalled)
+    }
+  }, [])
+
+  // Reusable device Geolocation -> Kemenag RI Kab/Kota detector
+  const runDeviceGeolocation = useCallback(async (isManualTrigger: boolean) => {
+    setIsLocatingCity(true)
+    if (isManualTrigger) {
+      setLocationError(null)
+      setLocationMessage(null)
+    }
+
+    try {
+      const detected = await detectCityFromDeviceGeolocation()
+      setCity(detected.city)
+      setCityMode('auto')
+      setLocationError(null)
+      if (isManualTrigger) {
+        setLocationMessage(`Lokasi terdeteksi: ${detected.city}`)
+      }
+      try {
+        localStorage.setItem('mizany_city', detected.city)
+        localStorage.setItem(CITY_MODE_STORAGE_KEY, 'auto')
+        localStorage.removeItem(GEO_DECLINED_STORAGE_KEY)
+      } catch {}
+    } catch (err: any) {
+      const msg = err?.message || 'Gagal mendeteksi lokasi perangkat.'
+      if (isManualTrigger) {
+        setLocationError(msg)
+      } else if (/ditolak/i.test(msg)) {
+        try {
+          localStorage.setItem(GEO_DECLINED_STORAGE_KEY, '1')
+        } catch {}
+      }
+    } finally {
+      setIsLocatingCity(false)
+    }
+  }, [])
+
+  // Auto-detect city via device Geolocation once on startup when in 'auto' mode
+  useEffect(() => {
+    if (!isHydrated || showOnboarding || cityMode !== 'auto' || hasAutoLocatedRef.current) return
+    hasAutoLocatedRef.current = true
+
+    try {
+      if (localStorage.getItem(GEO_DECLINED_STORAGE_KEY) === '1') return
+    } catch {}
+
+    runDeviceGeolocation(false)
+  }, [isHydrated, showOnboarding, cityMode, runDeviceGeolocation])
 
   // Live Prayer Times (Bimas Islam Kemenag RI): fetch once per city/day, tick synchronously every 1s
   useEffect(() => {
@@ -169,24 +314,20 @@ export default function App() {
     }
   }, [])
 
-  // Helper to update today's real daily log, persist immediately, and ignite streak celebration once per day
-  const updateTodayEntry = (id: string, updater: (prev: DailyLogEntry) => DailyLogEntry) => {
+  // Helper to update one or more entries in today's daily log atomically & ignite streak celebration once per day
+  const updateTodayEntries = (
+    updater: (prevDayLog: Record<string, DailyLogEntry>) => Record<string, DailyLogEntry>
+  ) => {
     const prevDayLog = dailyLogs[todayIso] || {}
     const wasActiveToday = hasCompletedAny(prevDayLog)
-    const nextDayLog = {
-      ...prevDayLog,
-      [id]: updater(prevDayLog[id] || {}),
-    }
+    const nextDayLog = updater(prevDayLog)
     const isNowActiveToday = hasCompletedAny(nextDayLog)
 
     setDailyLogs((prevLogs) => {
       const dayLog = prevLogs[todayIso] || {}
       const updatedLogs: DailyLogsByDate = {
         ...prevLogs,
-        [todayIso]: {
-          ...dayLog,
-          [id]: updater(dayLog[id] || {}),
-        },
+        [todayIso]: updater(dayLog),
       }
       try {
         localStorage.setItem(DAILY_LOGS_STORAGE_KEY, JSON.stringify(updatedLogs))
@@ -206,10 +347,35 @@ export default function App() {
     }
   }
 
+  const updateTodayEntry = (id: string, updater: (prev: DailyLogEntry) => DailyLogEntry) => {
+    updateTodayEntries((dayLog) => ({
+      ...dayLog,
+      [id]: updater(dayLog[id] || {}),
+    }))
+  }
+
   // Mode Ramadan aktif otomatis saat bulan Hijriah = 9 (Ramadan) dari MABIMS
   const isRamadan = hijriData?.today?.month === 9
 
   const todayLog = dailyLogs[todayIso] || {}
+
+  // Automatically link QuranView with the user's custom Qur'an / Tilawah amal on Beranda (if any)
+  const linkedQuranAmal = useMemo(
+    () => findLinkedQuranAmal(customAmalItems),
+    [customAmalItems]
+  )
+
+  const effectiveQuranTarget = useMemo(() => {
+    if (linkedQuranAmal?.type === 'target' && linkedQuranAmal.target) {
+      if (isJuzUnit(linkedQuranAmal.unit)) {
+        return linkedQuranAmal.target * PAGES_PER_JUZ
+      }
+      if (isPageUnit(linkedQuranAmal.unit)) {
+        return linkedQuranAmal.target
+      }
+    }
+    return tilawahTarget
+  }, [linkedQuranAmal, tilawahTarget])
 
   // Default mandatory items ONLY: Sholat 5 Waktu (always locked) + Puasa Ramadan (auto locked in Ramadan)
   const mandatoryAmalItems: AmalItem[] = useMemo(() => {
@@ -279,7 +445,7 @@ export default function App() {
     })
   }, [mandatoryAmalItems, customAmalItems, todayLog])
 
-  // Compute real streak, 7-day dots, and cumulative Quran pages
+  // Compute real streak, 7-day dots, and cumulative Quran pages (including previously logged linked amal)
   const { streakDays, last7DaysActive, totalTilawahPages } = useMemo(() => {
     const last7: boolean[] = []
     for (let offset = -6; offset <= 0; offset++) {
@@ -300,13 +466,26 @@ export default function App() {
 
     let totalPages = 0
     for (const dayLog of Object.values(dailyLogs)) {
-      totalPages += dayLog?.tilawah?.value || 0
+      const directPages = dayLog?.tilawah?.value || 0
+      const linkedEntry = linkedQuranAmal ? dayLog?.[linkedQuranAmal.id] : undefined
+      const linkedPages =
+        linkedQuranAmal && linkedEntry
+          ? linkedEntryToPages(linkedQuranAmal, linkedEntry, effectiveQuranTarget)
+          : 0
+      totalPages += Math.max(directPages, linkedPages)
     }
 
     return { streakDays: streak, last7DaysActive: last7, totalTilawahPages: totalPages }
-  }, [dailyLogs, todayIso])
+  }, [dailyLogs, todayIso, linkedQuranAmal, effectiveQuranTarget])
 
-  const pagesReadToday = todayLog.tilawah?.value || 0
+  const pagesReadToday = useMemo(() => {
+    const directPages = todayLog.tilawah?.value || 0
+    if (!linkedQuranAmal) return directPages
+    const linkedEntry = todayLog[linkedQuranAmal.id]
+    if (!linkedEntry) return directPages
+    if (todayLog.tilawah !== undefined) return directPages
+    return linkedEntryToPages(linkedQuranAmal, linkedEntry, effectiveQuranTarget)
+  }, [todayLog, linkedQuranAmal, effectiveQuranTarget])
 
   const handleCompleteOnboarding = () => {
     setShowOnboarding(false)
@@ -329,18 +508,83 @@ export default function App() {
   }
 
   const handleToggleCheck = (id: string) => {
-    updateTodayEntry(id, (prev) => ({ ...prev, done: !prev.done }))
+    updateTodayEntries((dayLog) => {
+      const prev = dayLog[id] || {}
+      const nextEntry: DailyLogEntry = { ...prev, done: !prev.done }
+      const nextLog: Record<string, DailyLogEntry> = { ...dayLog, [id]: nextEntry }
+      if (linkedQuranAmal && linkedQuranAmal.id === id) {
+        nextLog.tilawah = {
+          value: linkedEntryToPages(linkedQuranAmal, nextEntry, effectiveQuranTarget),
+        }
+      }
+      return nextLog
+    })
   }
 
   const handleIncrementCounter = (id: string, delta: number) => {
-    updateTodayEntry(id, (prev) => ({
-      ...prev,
-      value: Math.max(0, (prev.value || 0) + delta),
-    }))
+    updateTodayEntries((dayLog) => {
+      const prev = dayLog[id] || {}
+      const nextEntry: DailyLogEntry = { ...prev, value: Math.max(0, (prev.value || 0) + delta) }
+      const nextLog: Record<string, DailyLogEntry> = { ...dayLog, [id]: nextEntry }
+      if (linkedQuranAmal && linkedQuranAmal.id === id) {
+        nextLog.tilawah = {
+          value: linkedEntryToPages(linkedQuranAmal, nextEntry, effectiveQuranTarget),
+        }
+      }
+      return nextLog
+    })
   }
 
   const handleUpdateValue = (id: string, value: number) => {
-    updateTodayEntry(id, (prev) => ({ ...prev, value: Math.max(0, value) }))
+    updateTodayEntries((dayLog) => {
+      const prev = dayLog[id] || {}
+      const nextEntry: DailyLogEntry = { ...prev, value: Math.max(0, value) }
+      const nextLog: Record<string, DailyLogEntry> = { ...dayLog, [id]: nextEntry }
+      if (linkedQuranAmal && linkedQuranAmal.id === id) {
+        nextLog.tilawah = {
+          value: linkedEntryToPages(linkedQuranAmal, nextEntry, effectiveQuranTarget),
+        }
+      }
+      return nextLog
+    })
+  }
+
+  const handleChangeQuranPages = (nextPages: number) => {
+    const safePages = Math.max(0, Math.floor(nextPages))
+    updateTodayEntries((dayLog) => {
+      const nextLog: Record<string, DailyLogEntry> = {
+        ...dayLog,
+        tilawah: { value: safePages },
+      }
+      if (linkedQuranAmal) {
+        nextLog[linkedQuranAmal.id] = {
+          ...(dayLog[linkedQuranAmal.id] || {}),
+          ...pagesToLinkedEntry(linkedQuranAmal, safePages, effectiveQuranTarget),
+        }
+      }
+      return nextLog
+    })
+  }
+
+  const handleAddQuranToChecklist = () => {
+    const newItem: AmalItem = {
+      id: `custom_${Date.now()}`,
+      name: "Baca Qur'an",
+      type: 'target',
+      target: tilawahTarget,
+      unit: 'halaman',
+      icon: 'book',
+      isCustom: true,
+    }
+    const updated = [...customAmalItems, newItem]
+    setCustomAmalItems(updated)
+    try {
+      localStorage.setItem('mizany_custom_amal', JSON.stringify(updated))
+    } catch {}
+
+    if (pagesReadToday > 0) {
+      updateTodayEntry(newItem.id, () => ({ value: pagesReadToday }))
+    }
   }
 
   const handleOpenAddAmal = () => {
@@ -362,36 +606,38 @@ export default function App() {
     unit?: string
   }) => {
     const icon = inferAmalIcon(data.name, data.type)
+    const newId = data.id || `custom_${Date.now()}`
+    const newItem: AmalItem = {
+      id: newId,
+      name: data.name,
+      type: data.type,
+      target: data.target,
+      unit: data.unit,
+      icon,
+      isCustom: true,
+    }
+
     const updated = data.id
-      ? customAmalItems.map((item) =>
-          item.id === data.id
-            ? {
-                ...item,
-                name: data.name,
-                type: data.type,
-                target: data.target,
-                unit: data.unit,
-                icon,
-              }
-            : item
-        )
-      : [
-          ...customAmalItems,
-          {
-            id: `custom_${Date.now()}`,
-            name: data.name,
-            type: data.type,
-            target: data.target,
-            unit: data.unit,
-            icon,
-            isCustom: true,
-          },
-        ]
+      ? customAmalItems.map((item) => (item.id === data.id ? { ...item, ...newItem } : item))
+      : [...customAmalItems, newItem]
 
     setCustomAmalItems(updated)
     try {
       localStorage.setItem('mizany_custom_amal', JSON.stringify(updated))
     } catch {}
+
+    // If user newly created a Qur'an amal while already logging pages in QuranView today, sync it immediately
+    if (!data.id && findLinkedQuranAmal([newItem]) && pagesReadToday > 0) {
+      const targetPages =
+        newItem.type === 'target' && newItem.target
+          ? isJuzUnit(newItem.unit)
+            ? newItem.target * PAGES_PER_JUZ
+            : isPageUnit(newItem.unit)
+            ? newItem.target
+            : tilawahTarget
+          : tilawahTarget
+      updateTodayEntry(newId, () => pagesToLinkedEntry(newItem, pagesReadToday, targetPages))
+    }
   }
 
   const handleDeleteCustomAmal = (id: string) => {
@@ -404,16 +650,57 @@ export default function App() {
 
   const handleChangeCity = (newCity: string) => {
     setCity(newCity)
+    setCityMode('manual')
+    setLocationMessage(null)
+    setLocationError(null)
     try {
       localStorage.setItem('mizany_city', newCity)
+      localStorage.setItem(CITY_MODE_STORAGE_KEY, 'manual')
     } catch {}
   }
 
-  const handleChangeTilawahTarget = (newTarget: number) => {
-    setTilawahTarget(newTarget)
+  const handleInstallPwa = async () => {
+    if (!deferredInstallPrompt) return
     try {
-      localStorage.setItem('mizany_tilawah_target', newTarget.toString())
+      await deferredInstallPrompt.prompt()
+      const choice = await deferredInstallPrompt.userChoice
+      if (choice.outcome === 'accepted') {
+        setIsPwaInstalled(true)
+      }
+    } catch {
+      // Ignore install prompt errors
+    } finally {
+      setDeferredInstallPrompt(null)
+    }
+  }
+
+  const handleChangeTilawahTarget = (newTarget: number) => {
+    const safeTarget = Math.max(1, Math.round(newTarget))
+    setTilawahTarget(safeTarget)
+    try {
+      localStorage.setItem('mizany_tilawah_target', safeTarget.toString())
     } catch {}
+
+    if (linkedQuranAmal?.type === 'target') {
+      if (isPageUnit(linkedQuranAmal.unit)) {
+        const updated = customAmalItems.map((item) =>
+          item.id === linkedQuranAmal.id ? { ...item, target: safeTarget } : item
+        )
+        setCustomAmalItems(updated)
+        try {
+          localStorage.setItem('mizany_custom_amal', JSON.stringify(updated))
+        } catch {}
+      } else if (isJuzUnit(linkedQuranAmal.unit)) {
+        const nextJuz = Math.max(1, Math.round(safeTarget / PAGES_PER_JUZ))
+        const updated = customAmalItems.map((item) =>
+          item.id === linkedQuranAmal.id ? { ...item, target: nextJuz } : item
+        )
+        setCustomAmalItems(updated)
+        try {
+          localStorage.setItem('mizany_custom_amal', JSON.stringify(updated))
+        } catch {}
+      }
+    }
   }
 
   const scrollToSection = (id: string) => {
@@ -500,11 +787,13 @@ export default function App() {
           {/* VIEW: QURAN */}
           {activeTab === 'quran' && (
             <QuranView
-              dailyTarget={tilawahTarget}
+              dailyTarget={effectiveQuranTarget}
               pagesReadToday={pagesReadToday}
               totalPagesRead={totalTilawahPages}
               hijriDateLabel={hijriData?.formattedDate}
-              onChangePagesToday={(nextPages) => handleUpdateValue('tilawah', nextPages)}
+              linkedAmalName={linkedQuranAmal?.name}
+              onChangePagesToday={handleChangeQuranPages}
+              onAddToChecklist={handleAddQuranToChecklist}
             />
           )}
 
@@ -518,14 +807,22 @@ export default function App() {
           {activeTab === 'atur' && (
             <AturView
               city={city}
+              cityMode={cityMode}
+              isLocatingCity={isLocatingCity}
+              locationMessage={locationMessage}
+              locationError={locationError}
+              onDetectLocation={() => runDeviceGeolocation(true)}
               onChangeCity={handleChangeCity}
-              tilawahTarget={tilawahTarget}
+              tilawahTarget={effectiveQuranTarget}
               onChangeTilawahTarget={handleChangeTilawahTarget}
               customAmalItems={customAmalItems}
               onOpenAddAmal={handleOpenAddAmal}
               onEditAmal={handleOpenEditAmal}
               onDeleteCustomAmal={handleDeleteCustomAmal}
               onReplayOnboarding={() => setShowOnboarding(true)}
+              canInstallPwa={Boolean(deferredInstallPrompt)}
+              isPwaInstalled={isPwaInstalled}
+              onInstallPwa={handleInstallPwa}
             />
           )}
 
