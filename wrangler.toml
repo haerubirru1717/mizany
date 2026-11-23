@@ -5,5 +5,5 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "mizany-db"
-database_id = "local-mizany-db"
+database_id = "c44e666b-9ab0-46b6-b878-93c12ceca2c3"
 migrations_dir = "db"
