@@ -64,7 +64,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
       </div>
 
       {/* Circular Arc Gauge */}
-      <div className="relative z-10 mt-4 max-w-[320px] mx-auto">
+      <div className="relative z-10 -mt-2 sm:mt-0 max-w-[310px] mx-auto">
         <svg viewBox="0 0 300 168" className="w-full h-auto drop-shadow-sm" fill="none">
           <defs>
             <linearGradient id="heroGrad" x1="0" y1="1" x2="1" y2="0">
