@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { RotateCcw, ChevronDown, Plus, Trash2, Vibrate, Check, X } from 'lucide-react'
 
 interface DhikrItem {
@@ -22,6 +22,19 @@ const PRESET_TARGETS = [33, 99, 100]
 const CUSTOM_DHIKR_KEY = 'mizany_tasbih_custom_dhikr_v1'
 const TASBIH_STATE_KEY = 'mizany_tasbih_state_v1'
 
+const IS_IOS =
+  typeof navigator !== 'undefined' &&
+  (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
+
+function vibrateDevice(pattern: number | number[]) {
+  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+    try {
+      navigator.vibrate(pattern)
+    } catch {}
+  }
+}
+
 export const TasbihView: React.FC = () => {
   const [customDhikr, setCustomDhikr] = useState<DhikrItem[]>([])
   const [selectedId, setSelectedId] = useState<string>('subhanallah')
@@ -41,6 +54,33 @@ export const TasbihView: React.FC = () => {
   const [newArabic, setNewArabic] = useState('')
   const [newMeaning, setNewMeaning] = useState('')
   const [newTarget, setNewTarget] = useState('33')
+
+  const tapBtnRef = useRef<HTMLButtonElement | null>(null)
+  const hapticStateRef = useRef({ hapticEnabled: true, isNextMilestone: false })
+  const vibratedOnPointerRef = useRef(false)
+
+  hapticStateRef.current = {
+    hapticEnabled,
+    isNextMilestone: count + 1 >= target,
+  }
+
+  // Attach raw native pointerdown listener for zero-latency trusted Vibration API firing on Android Chrome
+  useEffect(() => {
+    if (IS_IOS) return
+    const btn = tapBtnRef.current
+    if (!btn) return
+
+    const onNativePointerDown = () => {
+      if (!hapticStateRef.current.hapticEnabled) return
+      vibratedOnPointerRef.current = true
+      vibrateDevice(hapticStateRef.current.isNextMilestone ? [80, 50, 140] : 55)
+    }
+
+    btn.addEventListener('pointerdown', onNativePointerDown, { passive: true })
+    return () => {
+      btn.removeEventListener('pointerdown', onNativePointerDown)
+    }
+  }, [])
 
   // Load saved custom dhikr & tasbih state
   useEffect(() => {
@@ -83,23 +123,24 @@ export const TasbihView: React.FC = () => {
 
   const triggerHaptic = (isMilestone: boolean) => {
     if (!hapticEnabled) return
-    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-      try {
-        navigator.vibrate(isMilestone ? [65, 50, 110] : 40)
-      } catch {}
-    }
+    vibrateDevice(isMilestone ? [80, 50, 140] : 55)
   }
 
   const handleTap = () => {
     setTapPulseKey((k) => k + 1)
     const nextCount = count + 1
-    if (nextCount >= target) {
+    const isMilestone = nextCount >= target
+    if (isMilestone) {
       setCount(0)
       setRounds((r) => r + 1)
-      triggerHaptic(true)
     } else {
       setCount(nextCount)
-      triggerHaptic(false)
+    }
+
+    if (vibratedOnPointerRef.current) {
+      vibratedOnPointerRef.current = false
+    } else {
+      triggerHaptic(isMilestone)
     }
   }
 
@@ -415,15 +456,15 @@ export const TasbihView: React.FC = () => {
         </form>
       )}
 
-      {/* Main Interactive Tap Circle — direct-tap native switch overlay for iOS 18–26.5+ Taptic Engine & Android vibrate */}
+      {/* Main Interactive Tap Circle — native button + pointerdown vibrate on Android, switch overlay on iOS */}
       <div className="py-3 flex justify-center">
         <div
-          className={`relative w-64 h-64 rounded-full overflow-hidden flex items-center justify-center transition-transform duration-100 select-none ${
+          className={`relative w-64 h-64 rounded-full overflow-hidden flex items-center justify-center transition-transform duration-100 select-none touch-manipulation ${
             isPressed ? 'scale-[0.94]' : ''
           }`}
         >
           {/* Direct physical tap target covering the circular area */}
-          {hapticEnabled ? (
+          {IS_IOS && hapticEnabled ? (
             <input
               ref={(el) => {
                 if (el) el.setAttribute('switch', '')
@@ -436,11 +477,12 @@ export const TasbihView: React.FC = () => {
               onPointerCancel={() => setIsPressed(false)}
               onPointerLeave={() => setIsPressed(false)}
               aria-label={`Hitung dzikir ${activeDhikr.latin}, saat ini ${count} dari ${target}`}
-              className="absolute inset-0 z-20 w-full h-full m-0 opacity-0 cursor-pointer"
+              className="absolute inset-0 z-20 w-full h-full m-0 opacity-0 cursor-pointer touch-manipulation"
               style={{ appearance: 'auto', WebkitAppearance: 'auto' as any }}
             />
           ) : (
             <button
+              ref={tapBtnRef}
               type="button"
               onClick={handleTap}
               onPointerDown={() => setIsPressed(true)}
@@ -448,7 +490,7 @@ export const TasbihView: React.FC = () => {
               onPointerCancel={() => setIsPressed(false)}
               onPointerLeave={() => setIsPressed(false)}
               aria-label={`Hitung dzikir ${activeDhikr.latin}, saat ini ${count} dari ${target}`}
-              className="absolute inset-0 z-20 w-full h-full m-0 opacity-0 cursor-pointer"
+              className="absolute inset-0 z-20 w-full h-full m-0 opacity-0 cursor-pointer touch-manipulation"
             />
           )}
 
@@ -503,13 +545,9 @@ export const TasbihView: React.FC = () => {
           onClick={() => {
             const next = !hapticEnabled
             setHapticEnabled(next)
-            if (next && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-              try {
-                navigator.vibrate(25)
-              } catch {}
-            }
+            if (next) vibrateDevice(60)
           }}
-          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold cursor-pointer active:scale-95 transition-all shadow-sm ${
+          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold cursor-pointer active:scale-95 transition-all shadow-sm touch-manipulation ${
             hapticEnabled
               ? 'bg-[#0F50BD]/10 text-[#0F50BD] border border-[#0F50BD]/20'
               : 'glass-card text-[#525252]'
@@ -523,7 +561,7 @@ export const TasbihView: React.FC = () => {
         <button
           type="button"
           onClick={handleReset}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full glass-card text-xs font-semibold text-[#525252] hover:text-[#101828] cursor-pointer active:scale-95 transition-all shadow-sm"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full glass-card text-xs font-semibold text-[#525252] hover:text-[#101828] cursor-pointer active:scale-95 transition-all shadow-sm touch-manipulation"
         >
           <RotateCcw size={14} />
           <span>Mulai dari 0</span>
