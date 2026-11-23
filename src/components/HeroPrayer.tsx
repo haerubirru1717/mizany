@@ -35,8 +35,13 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
           <div className="text-[14.5px] font-bold text-white leading-tight">
             {hijriDate}
           </div>
-          <div className="text-[12px] font-medium text-white/80 leading-tight mt-0.5">
-            {gregorianDate}
+          <div className="flex items-center gap-1.5 text-[12.5px] font-medium text-white/85 leading-tight mt-1">
+            <span>{gregorianDate}</span>
+            <span className="text-[#8BA0F3]">•</span>
+            <span className="flex items-center gap-1">
+              <MapPin size={12} className="text-[#8BA0F3] shrink-0" />
+              <span>{city}</span>
+            </span>
           </div>
         </div>
 
@@ -94,15 +99,6 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
           <span className="inline-block mt-2 px-3.5 py-1 bg-white/20 border border-white/30 backdrop-blur-md rounded-full text-xs font-bold tracking-wider">
             {remainingTime}
           </span>
-        </div>
-      </div>
-
-      {/* Location Badge under Countdown Timer */}
-      <div className="relative z-10 mt-3 flex justify-center">
-        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/15 border border-white/25 backdrop-blur-md text-xs font-semibold text-white shadow-sm hover:bg-white/20 transition-colors">
-          <MapPin size={13} className="text-[#8BA0F3] shrink-0" />
-          <span>{city}</span>
-          <ChevronDown size={13} className="text-[#8BA0F3]" />
         </div>
       </div>
 
