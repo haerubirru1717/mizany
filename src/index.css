@@ -76,56 +76,36 @@ body {
   animation: viewFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Google Material-style 2-layer tonal wave gliding inside the filled progress arc */
-@keyframes arcWavePrimary {
+/* Sequential 2-segment glide inside the filled arc: transparent front -> color behind */
+@keyframes arcSegmentGlide {
   0% {
-    stroke-dashoffset: 125;
+    stroke-dashoffset: 84;
     opacity: 0;
   }
-  6% {
+  4% {
     opacity: 1;
   }
   44% {
-    stroke-dashoffset: -395;
     opacity: 1;
   }
-  50% {
-    stroke-dashoffset: -415;
+  48% {
+    stroke-dashoffset: -384;
     opacity: 0;
   }
   100% {
-    stroke-dashoffset: -415;
+    stroke-dashoffset: -384;
     opacity: 0;
   }
 }
 
-@keyframes arcWaveSecondary {
-  0% {
-    stroke-dashoffset: 75;
-    opacity: 0;
-  }
-  6% {
-    opacity: 1;
-  }
-  38% {
-    stroke-dashoffset: -395;
-    opacity: 1;
-  }
-  44% {
-    stroke-dashoffset: -415;
-    opacity: 0;
-  }
-  100% {
-    stroke-dashoffset: -415;
-    opacity: 0;
-  }
+.arc-wave-transparent {
+  opacity: 0;
+  animation: arcSegmentGlide 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: 0.4s;
 }
 
-.arc-wave-1 {
-  animation: arcWavePrimary 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-.arc-wave-2 {
-  animation: arcWaveSecondary 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  animation-delay: 0.55s;
+.arc-wave-color {
+  opacity: 0;
+  animation: arcSegmentGlide 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: 0.78s;
 }

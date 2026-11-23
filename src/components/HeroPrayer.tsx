@@ -82,6 +82,11 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
               <stop offset="55%" stopColor="#0F50BD" />
               <stop offset="100%" stopColor="#14B8A6" />
             </linearGradient>
+            <linearGradient id="arcColorWave" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0%" stopColor="#14B8A6" />
+              <stop offset="60%" stopColor="#8BA0F3" />
+              <stop offset="100%" stopColor="#8BA0F3" />
+            </linearGradient>
             <mask id="arcFillMask">
               <path
                 d="M28 156 A122 122 0 0 1 272 156"
@@ -111,23 +116,23 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
             strokeDashoffset={animatedOffset}
             className="transition-all duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
           />
-          {/* Minimalist Google-style 2-layer tonal wave inside active progress pipe */}
+          {/* Sequential transparent (front) -> solid color (behind) glide inside active progress pipe */}
           <g mask="url(#arcFillMask)">
             <path
               d="M28 156 A122 122 0 0 1 272 156"
-              stroke="rgba(255, 255, 255, 0.20)"
+              stroke="rgba(255, 255, 255, 0.32)"
               strokeWidth="17"
               strokeLinecap="round"
-              strokeDasharray="115 460"
-              className="arc-wave-1"
+              strokeDasharray="64 520"
+              className="arc-wave-transparent"
             />
             <path
               d="M28 156 A122 122 0 0 1 272 156"
-              stroke="rgba(255, 255, 255, 0.28)"
+              stroke="url(#arcColorWave)"
               strokeWidth="17"
               strokeLinecap="round"
-              strokeDasharray="65 510"
-              className="arc-wave-2"
+              strokeDasharray="64 520"
+              className="arc-wave-color"
             />
           </g>
         </svg>
