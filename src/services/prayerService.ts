@@ -41,13 +41,30 @@ export async function fetchPrayerTimes(city: string): Promise<PrayerSchedule | n
     if (!timings) return null
 
     const hijri = date?.hijri
+    const HIJRI_MONTHS_ID: Record<number, string> = {
+      1: 'Muharram',
+      2: 'Safar',
+      3: 'Rabiul Awwal',
+      4: 'Rabiul Akhir',
+      5: 'Jumadil Awwal',
+      6: 'Jumadil Akhir',
+      7: 'Rajab',
+      8: 'Sya\'ban',
+      9: 'Ramadan',
+      10: 'Syawwal',
+      11: 'Dzulqa\'dah',
+      12: 'Dzulhijjah',
+    }
+
+    const monthNum = hijri?.month?.number || 9
+    const monthName = HIJRI_MONTHS_ID[monthNum] || hijri?.month?.en || 'Ramadan'
     const hijriStr = hijri
-      ? `${hijri.day} ${hijri.month?.en || 'Ramadan'} ${hijri.year} H`
+      ? `${hijri.day} ${monthName} ${hijri.year} H`
       : '12 Ramadan 1448 H'
 
-    const gregorianStr = date?.readable || new Date().toLocaleDateString('id-ID', {
+    const gregorianStr = new Date().toLocaleDateString('id-ID', {
       day: 'numeric',
-      month: 'long',
+      month: 'short',
       year: 'numeric',
     })
 

@@ -32,10 +32,14 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
       {/* Top row: Date & City & Notification */}
       <div className="flex items-start justify-between relative z-10">
         <div>
-          <div className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-white/90">
-            <span className="font-bold text-white text-[15px]">{hijriDate}</span>
-            <span className="text-[#8BA0F3]">•</span>
-            <span className="text-white/80">{gregorianDate}</span>
+          <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
+            <span className="font-bold text-white text-[14.5px] leading-tight">
+              {hijriDate}
+            </span>
+            <span className="hidden sm:inline text-[#8BA0F3] text-xs font-semibold">•</span>
+            <span className="text-white/80 text-[12px] font-medium leading-tight">
+              {gregorianDate}
+            </span>
           </div>
 
           <div className="flex items-center gap-1.5 text-white font-bold text-base mt-1">
