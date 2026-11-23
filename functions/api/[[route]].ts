@@ -161,4 +161,29 @@ app.get('/hijri', async (c) => {
   }
 })
 
+// Endpoint grid bulan Hijriah tertentu dari api.mabims.dev (untuk navigasi kalender)
+app.get('/hijri/month', async (c) => {
+  const year = Number(c.req.query('year'))
+  const month = Number(c.req.query('month'))
+  if (!year || !month || month < 1 || month > 12) {
+    return c.json({ error: 'Parameter year dan month (1-12) wajib valid' }, 400)
+  }
+  try {
+    const res = await fetch(`https://api.mabims.dev/api/v1/month?year=${year}&month=${month}`)
+    if (!res.ok) {
+      return c.json({ error: 'Gagal mengambil kalender bulan dari MABIMS' }, 502)
+    }
+    const json: any = await res.json()
+    c.header('Cache-Control', 'public, max-age=86400')
+    return c.json({
+      year,
+      month,
+      count: json?.count || 30,
+      days: Array.isArray(json?.items) ? json.items : [],
+    })
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Server error' }, 500)
+  }
+})
+
 export const onRequest = handle(app)

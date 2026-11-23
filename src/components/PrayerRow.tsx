@@ -15,17 +15,17 @@ interface PrayerRowProps {
   onSelectPrayer?: (prayer: PrayerItem) => void
 }
 
-const DEFAULT_PRAYERS: PrayerItem[] = [
-  { id: 'subuh', name: 'Subuh', time: '04:38', isPassed: true },
-  { id: 'terbit', name: 'Terbit', time: '05:53', isPassed: true },
-  { id: 'dzuhur', name: 'Dzuhur', time: '12:05', isPassed: true },
-  { id: 'ashar', name: 'Ashar', time: '15:19', isPassed: true },
-  { id: 'maghrib', name: 'Maghrib', time: '18:07', isNext: true },
-  { id: 'isya', name: 'Isya', time: '19:19' },
+const LOADING_PRAYERS: PrayerItem[] = [
+  { id: 'subuh', name: 'Subuh', time: '--:--' },
+  { id: 'terbit', name: 'Terbit', time: '--:--' },
+  { id: 'dzuhur', name: 'Dzuhur', time: '--:--' },
+  { id: 'ashar', name: 'Ashar', time: '--:--' },
+  { id: 'maghrib', name: 'Maghrib', time: '--:--' },
+  { id: 'isya', name: 'Isya', time: '--:--' },
 ]
 
 export const PrayerRow: React.FC<PrayerRowProps> = ({
-  prayers = DEFAULT_PRAYERS,
+  prayers = LOADING_PRAYERS,
   city,
   onSelectPrayer,
 }) => {

@@ -13,19 +13,19 @@ export const PrayerView: React.FC<PrayerViewProps> = ({ city, prayerSchedule, on
   const nextId = prayerSchedule?.nextPrayer?.id
 
   const prayerDetails = [
-    { id: 'imsak', name: 'Imsak', time: t?.imsak || '04:28', note: '10 menit sebelum Subuh' },
-    { id: 'subuh', name: 'Subuh', time: t?.subuh || '04:38', note: 'Mulai puasa harian' },
-    { id: 'terbit', name: 'Terbit', time: t?.terbit || '05:53', note: 'Matahari terbit (syuruq)', forbidden: true },
-    { id: 'dhuha', name: 'Dhuha', time: t?.dhuha || '06:20', note: 'Mulai waktu sholat Dhuha' },
-    { id: 'dzuhur', name: 'Dzuhur', time: t?.dzuhur || '12:05', note: 'Matahari tergelincir' },
-    { id: 'ashar', name: 'Ashar', time: t?.ashar || '15:19', note: 'Bayangan sama panjang' },
-    { id: 'maghrib', name: 'Maghrib', time: t?.maghrib || '18:07', note: 'Waktu berbuka puasa' },
-    { id: 'isya', name: 'Isya', time: t?.isya || '19:19', note: 'Dilanjutkan Sholat Tarawih & Witir' },
+    { id: 'imsak', name: 'Imsak', time: t?.imsak || '--:--', note: '10 menit sebelum Subuh' },
+    { id: 'subuh', name: 'Subuh', time: t?.subuh || '--:--', note: 'Mulai waktu fajar' },
+    { id: 'terbit', name: 'Terbit', time: t?.terbit || '--:--', note: 'Matahari terbit (syuruq)', forbidden: true },
+    { id: 'dhuha', name: 'Dhuha', time: t?.dhuha || '--:--', note: 'Mulai waktu sholat Dhuha' },
+    { id: 'dzuhur', name: 'Dzuhur', time: t?.dzuhur || '--:--', note: 'Matahari tergelincir' },
+    { id: 'ashar', name: 'Ashar', time: t?.ashar || '--:--', note: 'Bayangan sama panjang' },
+    { id: 'maghrib', name: 'Maghrib', time: t?.maghrib || '--:--', note: 'Matahari terbenam' },
+    { id: 'isya', name: 'Isya', time: t?.isya || '--:--', note: 'Hilangnya syafaq merah' },
   ]
 
-  const nextName = prayerSchedule?.nextPrayer?.name || 'Maghrib'
-  const nextTime = prayerSchedule?.nextPrayer?.time || '18:07'
-  const nextRemaining = prayerSchedule?.nextPrayer?.remainingLabel || 'Menghitung sisa waktu...'
+  const nextName = prayerSchedule?.nextPrayer?.name || 'Memuat...'
+  const nextTime = prayerSchedule?.nextPrayer?.time || '--:--'
+  const nextRemaining = prayerSchedule?.nextPrayer?.remainingLabel || 'Mengambil jadwal Kemenag RI...'
 
   return (
     <div className="space-y-4 pb-24">

@@ -4,11 +4,15 @@ import { BookOpen, Sparkles, Calendar, Flame, ArrowRight } from 'lucide-react'
 import { MosqueSkyline } from './MosqueSkyline'
 
 interface QuickActionsProps {
+  streakDays: number
+  last7DaysActive: boolean[]
   onNavigate: (tab: TabKey) => void
   onScrollToChecklist: () => void
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({
+  streakDays,
+  last7DaysActive,
   onNavigate,
   onScrollToChecklist,
 }) => {
@@ -81,16 +85,35 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         </div>
 
         <div className="flex-1">
-          <div className="text-[15px] font-bold text-[#101828] leading-tight">11 hari beruntun</div>
-          <div className="text-[12px] text-[#525252] mt-0.5">Checklist terisi sejak 1 Ramadan</div>
+          <div className="text-[15px] font-bold text-[#101828] leading-tight">
+            {streakDays > 0 ? `${streakDays} hari beruntun` : 'Mulai hari ini'}
+          </div>
+          <div className="text-[12px] text-[#525252] mt-0.5">
+            {streakDays > 0
+              ? 'Checklist amal tercatat konsisten'
+              : 'Centang minimal 1 amal untuk mulai streak'}
+          </div>
         </div>
 
-        {/* 7 dots for the week */}
+        {/* 7 dots for the last 7 real days */}
         <div className="flex items-center gap-1.5 shrink-0" aria-label="7 hari terakhir">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <span key={i} className="w-2.5 h-2.5 rounded-full bg-[#0F50BD]" />
-          ))}
-          <span className="w-2.5 h-2.5 rounded-full bg-[#0F50BD] ring-2 ring-[#0F50BD]/30" />
+          {last7DaysActive.map((active, idx) => {
+            const isTodayDot = idx === last7DaysActive.length - 1
+            return (
+              <span
+                key={idx}
+                className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                  active
+                    ? isTodayDot
+                      ? 'bg-[#0F50BD] ring-2 ring-[#0F50BD]/30'
+                      : 'bg-[#0F50BD]'
+                    : isTodayDot
+                    ? 'bg-black/15 ring-2 ring-[#0F50BD]/20'
+                    : 'bg-black/10'
+                }`}
+              />
+            )
+          })}
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { TabKey, AmalItem } from './types'
 import { HeroPrayer } from './components/HeroPrayer'
 import { PrayerRow } from './components/PrayerRow'
@@ -14,28 +14,35 @@ import { Onboarding } from './components/Onboarding'
 import { fetchPrayerTimes, PrayerSchedule } from './services/prayerService'
 import { fetchHijriHeroData, HijriHeroData } from './services/hijriService'
 
-const DEFAULT_AMAL: AmalItem[] = [
-  { id: 'puasa', name: 'Puasa', note: 'Sejak Subuh tadi', icon: 'sun', type: 'checklist', done: true },
-  { id: 'sholat', name: 'Sholat 5 waktu', note: 'Isya belum — 19:19', icon: 'dome', type: 'checklist', done: false },
-  { id: 'tarawih', name: 'Tarawih', note: 'Di masjid / rumah', icon: 'moon', type: 'checklist', done: false },
-  { id: 'witir', name: 'Witir', note: 'Penutup malam', icon: 'star', type: 'checklist', done: false },
-  { id: 'tilawah', name: 'Tilawah', note: 'Target 20 halaman', icon: 'book', type: 'target', unit: 'halaman', value: 15, target: 20 },
-  { id: 'dzikir', name: 'Dzikir', note: 'Pagi & petang', icon: 'beads', type: 'counter', value: 33 },
-  { id: 'sedekah', name: 'Sedekah', note: 'Kotak amal / online', icon: 'gift', type: 'amount', value: 20000 },
-  { id: 'sahur', name: 'Sahur', note: 'Sebelum imsak', icon: 'bowl', type: 'checklist', done: true },
-]
+type DailyLogEntry = { done?: boolean; value?: number }
+type DailyLogsByDate = Record<string, Record<string, DailyLogEntry>>
+
+const DAILY_LOGS_STORAGE_KEY = 'mizany_daily_logs_v1'
+
+function getLocalIsoDate(daysOffset = 0): string {
+  const d = new Date()
+  d.setDate(d.getDate() + daysOffset)
+  return d.toLocaleDateString('en-CA')
+}
+
+function hasCompletedAny(dayLog?: Record<string, DailyLogEntry>): boolean {
+  if (!dayLog) return false
+  return Object.values(dayLog).some((entry) => entry.done === true || (entry.value || 0) > 0)
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>('beranda')
   const [city, setCity] = useState<string>('Kota Tangerang')
   const [tilawahTarget, setTilawahTarget] = useState<number>(20)
-  const [amalItems, setAmalItems] = useState<AmalItem[]>(DEFAULT_AMAL)
   const [customAmalItems, setCustomAmalItems] = useState<AmalItem[]>([])
+  const [dailyLogs, setDailyLogs] = useState<DailyLogsByDate>({})
   const [showOnboarding, setShowOnboarding] = useState<boolean>(false)
   const [prayerSchedule, setPrayerSchedule] = useState<PrayerSchedule | null>(null)
   const [hijriData, setHijriData] = useState<HijriHeroData | null>(null)
 
-  // Initialize settings from localStorage safely
+  const todayIso = getLocalIsoDate(0)
+
+  // Initialize persisted settings & real daily logs from localStorage
   useEffect(() => {
     try {
       const storedOnboarding = localStorage.getItem('mizany_has_seen_onboarding')
@@ -50,12 +57,15 @@ export default function App() {
 
       const storedCustom = localStorage.getItem('mizany_custom_amal')
       if (storedCustom) setCustomAmalItems(JSON.parse(storedCustom))
+
+      const storedLogs = localStorage.getItem(DAILY_LOGS_STORAGE_KEY)
+      if (storedLogs) setDailyLogs(JSON.parse(storedLogs))
     } catch {
       // Ignore storage errors in sandbox
     }
   }, [])
 
-  // Live Prayer Times & dynamic countdown loop
+  // Live Prayer Times (Bimas Islam Kemenag RI) & dynamic 1s countdown loop
   useEffect(() => {
     let isMounted = true
 
@@ -76,7 +86,7 @@ export default function App() {
     }
   }, [city])
 
-  // Fetch official Kemenag RI (MABIMS) Hijri calendar data
+  // Fetch official Kemenag RI (Neo MABIMS) Hijri calendar data
   useEffect(() => {
     let isMounted = true
     fetchHijriHeroData().then((data) => {
@@ -89,6 +99,106 @@ export default function App() {
     }
   }, [])
 
+  // Helper to update today's real daily log and persist immediately
+  const updateTodayEntry = (id: string, updater: (prev: DailyLogEntry) => DailyLogEntry) => {
+    setDailyLogs((prevLogs) => {
+      const dayLog = prevLogs[todayIso] || {}
+      const updatedLogs: DailyLogsByDate = {
+        ...prevLogs,
+        [todayIso]: {
+          ...dayLog,
+          [id]: updater(dayLog[id] || {}),
+        },
+      }
+      try {
+        localStorage.setItem(DAILY_LOGS_STORAGE_KEY, JSON.stringify(updatedLogs))
+      } catch {}
+      return updatedLogs
+    })
+  }
+
+  // Mode Ramadan aktif otomatis saat bulan Hijriah = 9 (Ramadan) dari MABIMS
+  const isRamadan = hijriData?.today?.month === 9
+
+  const todayLog = dailyLogs[todayIso] || {}
+
+  // Build real base checklist items synchronized with live prayer times, target tilawah, and Mode Ramadan
+  const baseAmalItems: AmalItem[] = useMemo(() => {
+    const nextPrayerNote = prayerSchedule?.nextPrayer
+      ? `Berikutnya: ${prayerSchedule.nextPrayer.name} — ${prayerSchedule.nextPrayer.time}`
+      : 'Jadwal Bimas Islam Kemenag RI'
+
+    const list: AmalItem[] = []
+
+    if (isRamadan) {
+      list.push(
+        { id: 'puasa', name: 'Puasa', note: 'Puasa wajib Ramadan', icon: 'sun', type: 'checklist' },
+        { id: 'sahur', name: 'Sahur', note: prayerSchedule?.timings?.imsak ? `Sebelum imsak — ${prayerSchedule.timings.imsak}` : 'Sebelum imsak', icon: 'bowl', type: 'checklist' }
+      )
+    }
+
+    list.push({ id: 'sholat', name: 'Sholat 5 waktu', note: nextPrayerNote, icon: 'dome', type: 'checklist' })
+
+    if (isRamadan) {
+      list.push(
+        { id: 'tarawih', name: 'Tarawih', note: 'Di masjid / rumah', icon: 'moon', type: 'checklist' },
+        { id: 'witir', name: 'Witir', note: 'Penutup malam', icon: 'star', type: 'checklist' }
+      )
+    } else {
+      list.push({ id: 'puasa_sunnah', name: 'Puasa Sunnah', note: 'Senin-Kamis / Ayyamul Bidh', icon: 'sun', type: 'checklist' })
+    }
+
+    list.push(
+      { id: 'tilawah', name: 'Tilawah', note: `Target ${tilawahTarget} halaman`, icon: 'book', type: 'target', unit: 'halaman', target: tilawahTarget },
+      { id: 'dzikir', name: 'Dzikir', note: 'Pagi & petang', icon: 'beads', type: 'counter' },
+      { id: 'sedekah', name: 'Sedekah', note: 'Harian / infaq', icon: 'gift', type: 'amount' }
+    )
+
+    return list
+  }, [isRamadan, prayerSchedule?.nextPrayer?.name, prayerSchedule?.nextPrayer?.time, prayerSchedule?.timings?.imsak, tilawahTarget])
+
+  // Hydrate checklist items with today's persisted real log values
+  const hydratedItems: AmalItem[] = useMemo(() => {
+    return [...baseAmalItems, ...customAmalItems].map((item) => {
+      const entry = todayLog[item.id]
+      return {
+        ...item,
+        done: entry?.done ?? false,
+        value: entry?.value ?? 0,
+      }
+    })
+  }, [baseAmalItems, customAmalItems, todayLog])
+
+  // Compute real streak and last 7 days activity dots from persisted daily logs
+  const { streakDays, last7DaysActive, totalTilawahPages } = useMemo(() => {
+    const last7: boolean[] = []
+    for (let offset = -6; offset <= 0; offset++) {
+      const iso = getLocalIsoDate(offset)
+      last7.push(hasCompletedAny(dailyLogs[iso]))
+    }
+
+    let streak = 0
+    // Count consecutive days ending today (or yesterday if today hasn't started yet)
+    const startOffset = hasCompletedAny(dailyLogs[todayIso]) ? 0 : -1
+    for (let offset = startOffset; offset >= -365; offset--) {
+      const iso = getLocalIsoDate(offset)
+      if (hasCompletedAny(dailyLogs[iso])) {
+        streak += 1
+      } else {
+        break
+      }
+    }
+
+    let totalPages = 0
+    for (const dayLog of Object.values(dailyLogs)) {
+      totalPages += dayLog?.tilawah?.value || 0
+    }
+
+    return { streakDays: streak, last7DaysActive: last7, totalTilawahPages: totalPages }
+  }, [dailyLogs, todayIso])
+
+  const pagesReadToday = todayLog.tilawah?.value || 0
+
   const handleCompleteOnboarding = () => {
     setShowOnboarding(false)
     try {
@@ -97,34 +207,18 @@ export default function App() {
   }
 
   const handleToggleCheck = (id: string) => {
-    setAmalItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, done: !item.done } : item))
-    )
-    setCustomAmalItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, done: !item.done } : item))
-    )
+    updateTodayEntry(id, (prev) => ({ ...prev, done: !prev.done }))
   }
 
   const handleIncrementCounter = (id: string, delta: number) => {
-    setAmalItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, value: Math.max(0, (item.value || 0) + delta) } : item
-      )
-    )
-    setCustomAmalItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, value: Math.max(0, (item.value || 0) + delta) } : item
-      )
-    )
+    updateTodayEntry(id, (prev) => ({
+      ...prev,
+      value: Math.max(0, (prev.value || 0) + delta),
+    }))
   }
 
   const handleUpdateValue = (id: string, value: number) => {
-    setAmalItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, value } : item))
-    )
-    setCustomAmalItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, value } : item))
-    )
+    updateTodayEntry(id, (prev) => ({ ...prev, value: Math.max(0, value) }))
   }
 
   const handleAddCustomAmal = (newItem: Omit<AmalItem, 'id'>) => {
@@ -183,6 +277,8 @@ export default function App() {
               <HeroPrayer
                 city={city}
                 gregorianDate={prayerSchedule?.gregorianDate}
+                currentTime={prayerSchedule?.currentTime}
+                arcProgress={prayerSchedule?.arcProgress}
                 nextPrayerName={prayerSchedule?.nextPrayer?.name}
                 nextPrayerTime={prayerSchedule?.nextPrayer?.time}
                 remainingTime={prayerSchedule?.nextPrayer?.remaining}
@@ -192,6 +288,8 @@ export default function App() {
               />
 
               <QuickActions
+                streakDays={streakDays}
+                last7DaysActive={last7DaysActive}
                 onNavigate={(tab) => setActiveTab(tab)}
                 onScrollToChecklist={() => scrollToSection('checklist-section')}
               />
@@ -203,7 +301,7 @@ export default function App() {
               />
 
               <AmalChecklist
-                items={[...amalItems, ...customAmalItems]}
+                items={hydratedItems}
                 onToggleCheck={handleToggleCheck}
                 onIncrementCounter={handleIncrementCounter}
                 onUpdateValue={handleUpdateValue}
@@ -213,13 +311,21 @@ export default function App() {
           )}
 
           {/* VIEW: QURAN */}
-          {activeTab === 'quran' && <QuranView dailyTarget={tilawahTarget} />}
+          {activeTab === 'quran' && (
+            <QuranView
+              dailyTarget={tilawahTarget}
+              pagesReadToday={pagesReadToday}
+              totalPagesRead={totalTilawahPages}
+              hijriDateLabel={hijriData?.formattedDate}
+              onChangePagesToday={(nextPages) => handleUpdateValue('tilawah', nextPages)}
+            />
+          )}
 
           {/* VIEW: TASBIH */}
           {activeTab === 'tasbih' && <TasbihView />}
 
           {/* VIEW: KALENDER */}
-          {activeTab === 'kalender' && <KalenderView />}
+          {activeTab === 'kalender' && <KalenderView hijriData={hijriData} />}
 
           {/* VIEW: ATUR */}
           {activeTab === 'atur' && (

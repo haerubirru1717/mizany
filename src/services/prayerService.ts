@@ -15,6 +15,8 @@ export interface PrayerSchedule {
   lokasi?: string
   daerah?: string
   gregorianDate: string
+  currentTime: string
+  arcProgress: number // 0..1 elapsed between previous prayer and next prayer
   timings: PrayerTimingsRaw
   prayers: {
     id: string
@@ -43,6 +45,11 @@ interface CachedPrayerData {
 
 const memoryCache = new Map<string, CachedPrayerData>()
 
+function toSeconds(hhmm: string): number {
+  const [h, m] = hhmm.split(':').map(Number)
+  return (h || 0) * 3600 + (m || 0) * 60
+}
+
 export async function fetchPrayerTimes(city: string): Promise<PrayerSchedule | null> {
   try {
     const todayStr = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD local date
@@ -59,7 +66,7 @@ export async function fetchPrayerTimes(city: string): Promise<PrayerSchedule | n
       const cached = localStorage.getItem(cacheKey)
       if (cached) {
         const parsed: CachedPrayerData = JSON.parse(cached)
-        if (parsed?.timings?.subuh) {
+        if (parsed?.timings?.subuh && parsed?.timings?.isya) {
           memoryCache.set(cacheKey, parsed)
           return calculateNextPrayer(parsed)
         }
@@ -72,7 +79,7 @@ export async function fetchPrayerTimes(city: string): Promise<PrayerSchedule | n
 
     const json: any = await res.json()
     const j = json?.jadwal
-    if (!j?.subuh) return null
+    if (!j?.subuh || !j?.isya) return null
 
     const gregorianStr = new Date().toLocaleDateString('id-ID', {
       day: 'numeric',
@@ -87,14 +94,14 @@ export async function fetchPrayerTimes(city: string): Promise<PrayerSchedule | n
       daerah: json.daerah,
       gregorianDate: gregorianStr,
       timings: {
-        imsak: String(j.imsak || '04:28').slice(0, 5),
-        subuh: String(j.subuh || '04:38').slice(0, 5),
-        terbit: String(j.terbit || '05:53').slice(0, 5),
-        dhuha: String(j.dhuha || '06:20').slice(0, 5),
-        dzuhur: String(j.dzuhur || '12:05').slice(0, 5),
-        ashar: String(j.ashar || '15:19').slice(0, 5),
-        maghrib: String(j.maghrib || '18:07').slice(0, 5),
-        isya: String(j.isya || '19:19').slice(0, 5),
+        imsak: String(j.imsak || '').slice(0, 5),
+        subuh: String(j.subuh || '').slice(0, 5),
+        terbit: String(j.terbit || '').slice(0, 5),
+        dhuha: String(j.dhuha || '').slice(0, 5),
+        dzuhur: String(j.dzuhur || '').slice(0, 5),
+        ashar: String(j.ashar || '').slice(0, 5),
+        maghrib: String(j.maghrib || '').slice(0, 5),
+        isya: String(j.isya || '').slice(0, 5),
       },
     }
 
@@ -113,6 +120,7 @@ export async function fetchPrayerTimes(city: string): Promise<PrayerSchedule | n
 function calculateNextPrayer(data: CachedPrayerData): PrayerSchedule {
   const now = new Date()
   const currentTotalSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
+  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 
   const list = [
     { id: 'subuh', name: 'Subuh', time: data.timings.subuh },
@@ -123,21 +131,24 @@ function calculateNextPrayer(data: CachedPrayerData): PrayerSchedule {
     { id: 'isya', name: 'Isya', time: data.timings.isya },
   ]
 
-  let nextIdx = list.findIndex((p) => {
-    const [h, m] = p.time.split(':').map(Number)
-    return h * 3600 + m * 60 > currentTotalSeconds
-  })
-
+  let nextIdx = list.findIndex((p) => toSeconds(p.time) > currentTotalSeconds)
   const isTomorrow = nextIdx === -1
   if (isTomorrow) {
     nextIdx = 0
   }
 
   const nextP = list[nextIdx]
-  const [nh, nm] = nextP.time.split(':').map(Number)
-  let diffSeconds = nh * 3600 + nm * 60 - currentTotalSeconds
-  if (diffSeconds <= 0) diffSeconds += 24 * 3600
+  const nextSec = toSeconds(nextP.time) + (isTomorrow ? 24 * 3600 : 0)
 
+  // Compute real elapsed fraction between previous prayer and next prayer
+  const prevIdx = nextIdx === 0 ? list.length - 1 : nextIdx - 1
+  const prevRawSec = toSeconds(list[prevIdx].time)
+  const prevSec = nextIdx === 0 && !isTomorrow ? prevRawSec - 24 * 3600 : prevRawSec
+  const intervalDuration = Math.max(1, nextSec - prevSec)
+  const elapsed = Math.max(0, currentTotalSeconds - prevSec)
+  const arcProgress = Math.max(0.06, Math.min(0.96, elapsed / intervalDuration))
+
+  const diffSeconds = Math.max(0, nextSec - currentTotalSeconds)
   const remHours = Math.floor(diffSeconds / 3600)
   const remMins = Math.floor((diffSeconds % 3600) / 60)
   const remSecs = diffSeconds % 60
@@ -159,6 +170,8 @@ function calculateNextPrayer(data: CachedPrayerData): PrayerSchedule {
     lokasi: data.lokasi,
     daerah: data.daerah,
     gregorianDate: data.gregorianDate,
+    currentTime,
+    arcProgress,
     timings: data.timings,
     prayers,
     nextPrayer: {

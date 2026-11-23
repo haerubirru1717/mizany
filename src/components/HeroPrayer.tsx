@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { MosqueSkyline } from './MosqueSkyline'
 import { HijriHeroData } from '../services/hijriService'
-import { MapPin, Bell, CloudSun, ChevronRight, RotateCw, CalendarDays } from 'lucide-react'
+import { MapPin, Bell, Clock, ChevronRight, RotateCw, CalendarDays } from 'lucide-react'
 
 interface HeroPrayerProps {
   city: string
-  hijriDate?: string
   gregorianDate?: string
+  currentTime?: string
+  arcProgress?: number
   nextPrayerName?: string
   nextPrayerTime?: string
   remainingTime?: string
@@ -17,36 +18,51 @@ interface HeroPrayerProps {
 
 export const HeroPrayer: React.FC<HeroPrayerProps> = ({
   city,
-  hijriDate = '12 Ramadan 1448 H',
-  gregorianDate = '19 Februari 2027',
-  nextPrayerName = 'Maghrib',
-  nextPrayerTime = '18:07',
-  remainingTime = '02:41:09',
+  gregorianDate,
+  currentTime,
+  arcProgress,
+  nextPrayerName,
+  nextPrayerTime,
+  remainingTime,
   hijriData,
   onOpenPrayerDetail,
   onOpenCalendar,
 }) => {
-  const targetOffset = 115
+  const hasRealProgress = typeof arcProgress === 'number'
+  const targetOffset = hasRealProgress ? Math.round(384 * (1 - arcProgress)) : 384
   const [animatedOffset, setAnimatedOffset] = useState(384)
   const [isSettled, setIsSettled] = useState(false)
   const [isFlipped, setIsFlipped] = useState(false)
 
   useEffect(() => {
-    // Animate arc sweeping from 0 to target progress smoothly
+    if (!hasRealProgress) return
     const startTimer = setTimeout(() => {
       setAnimatedOffset(targetOffset)
-    }, 150)
-    const settleTimer = setTimeout(() => {
-      setIsSettled(true)
-    }, 1550)
-    return () => {
-      clearTimeout(startTimer)
-      clearTimeout(settleTimer)
-    }
-  }, [])
+    }, 120)
 
-  const displayHijriDate = hijriData?.formattedDate || hijriDate
-  const displayGregorianDate = hijriData?.today?.gregorianLabel || gregorianDate
+    if (!isSettled) {
+      const settleTimer = setTimeout(() => {
+        setIsSettled(true)
+      }, 1520)
+      return () => {
+        clearTimeout(startTimer)
+        clearTimeout(settleTimer)
+      }
+    }
+
+    return () => clearTimeout(startTimer)
+  }, [hasRealProgress, targetOffset, isSettled])
+
+  const fallbackTodayGreg = new Date().toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+  const displayHijriDate = hijriData?.formattedDate || 'Memuat tanggal Hijriah...'
+  const displayGregorianDate = hijriData?.today?.gregorianLabel || gregorianDate || fallbackTodayGreg
+  const displayCurrentTime =
+    currentTime ||
+    `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`
 
   return (
     <div className="-mx-4 -mt-2 sm:-mx-6 sm:-mt-4 hero-flip-scene">
@@ -145,7 +161,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
                   className="arc-tip-echo"
                 />
               )}
-              {/* Stationary active progress track */}
+              {/* Stationary active progress track synced to real elapsed time */}
               <path
                 d="M28 156 A122 122 0 0 1 272 156"
                 stroke="url(#heroGrad)"
@@ -180,23 +196,25 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
 
             {/* Text inside arc */}
             <div className="absolute inset-x-0 bottom-1 text-center pointer-events-none flex flex-col items-center">
-              <div className="text-3xl font-extrabold tracking-tight leading-tight">{nextPrayerName}</div>
+              <div className="text-3xl font-extrabold tracking-tight leading-tight">
+                {nextPrayerName || 'Memuat...'}
+              </div>
               <div className="text-xs sm:text-sm font-medium text-white/80 mt-0.5">
-                Sisa waktu · pukul <span className="font-semibold">{nextPrayerTime}</span>
+                Sisa waktu · pukul <span className="font-semibold">{nextPrayerTime || '--:--'}</span>
               </div>
               <span className="inline-block mt-2 px-3.5 py-1 bg-white/20 border border-white/30 backdrop-blur-md rounded-full text-xs font-bold tracking-wider">
-                {remainingTime}
+                {remainingTime || '--:--:--'}
               </span>
             </div>
           </div>
 
-          {/* Weather Strip & Prayer Detail Trigger */}
+          {/* Live Clock Strip & Prayer Detail Trigger */}
           <div className="relative z-10 mt-4 pt-3 border-t border-white/15 flex items-center justify-between text-xs text-white/85">
-            <div className="flex items-center gap-2">
-              <CloudSun size={17} className="text-[#8BA0F3]" />
-              <span>27°C Cerah</span>
+            <div className="flex items-center gap-1.5">
+              <Clock size={15} className="text-[#8BA0F3]" />
+              <span className="font-semibold">{displayCurrentTime}</span>
               <span className="text-white/40">•</span>
-              <span>10:08</span>
+              <span>Kemenag RI</span>
             </div>
             <button
               type="button"
@@ -297,11 +315,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
                         <span className="text-[13px] font-bold mt-1 leading-none">{d.day}</span>
                         <span
                           className={`w-1 h-1 rounded-full mt-1 ${
-                            d.isAyyamulBidh
-                              ? d.isToday
-                                ? 'bg-[#14B8A6]'
-                                : 'bg-[#14B8A6]'
-                              : 'bg-transparent'
+                            d.isAyyamulBidh ? 'bg-[#14B8A6]' : 'bg-transparent'
                           }`}
                         />
                       </div>
