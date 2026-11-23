@@ -111,15 +111,23 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
             strokeDashoffset={animatedOffset}
             className="transition-all duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
           />
-          {/* Minimalist Material-style flat tonal sheen inside active progress pipe */}
+          {/* Minimalist Google-style 2-layer tonal wave inside active progress pipe */}
           <g mask="url(#arcFillMask)">
             <path
               d="M28 156 A122 122 0 0 1 272 156"
-              stroke="rgba(255, 255, 255, 0.24)"
+              stroke="rgba(255, 255, 255, 0.20)"
               strokeWidth="17"
               strokeLinecap="round"
-              strokeDasharray="110 440"
-              className="arc-shimmer"
+              strokeDasharray="115 460"
+              className="arc-wave-1"
+            />
+            <path
+              d="M28 156 A122 122 0 0 1 272 156"
+              stroke="rgba(255, 255, 255, 0.28)"
+              strokeWidth="17"
+              strokeLinecap="round"
+              strokeDasharray="65 510"
+              className="arc-wave-2"
             />
           </g>
         </svg>

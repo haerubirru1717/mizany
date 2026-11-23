@@ -76,29 +76,56 @@ body {
   animation: viewFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Minimalist Material-style tonal sheen gliding calmly along the progress arc */
-@keyframes arcShimmerFlow {
+/* Google Material-style 2-layer tonal wave gliding inside the filled progress arc */
+@keyframes arcWavePrimary {
   0% {
-    stroke-dashoffset: 130;
+    stroke-dashoffset: 125;
     opacity: 0;
   }
-  8% {
+  6% {
     opacity: 1;
   }
-  48% {
-    stroke-dashoffset: -390;
+  44% {
+    stroke-dashoffset: -395;
     opacity: 1;
   }
-  54% {
-    stroke-dashoffset: -410;
+  50% {
+    stroke-dashoffset: -415;
     opacity: 0;
   }
   100% {
-    stroke-dashoffset: -410;
+    stroke-dashoffset: -415;
     opacity: 0;
   }
 }
 
-.arc-shimmer {
-  animation: arcShimmerFlow 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+@keyframes arcWaveSecondary {
+  0% {
+    stroke-dashoffset: 75;
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  38% {
+    stroke-dashoffset: -395;
+    opacity: 1;
+  }
+  44% {
+    stroke-dashoffset: -415;
+    opacity: 0;
+  }
+  100% {
+    stroke-dashoffset: -415;
+    opacity: 0;
+  }
+}
+
+.arc-wave-1 {
+  animation: arcWavePrimary 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.arc-wave-2 {
+  animation: arcWaveSecondary 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: 0.55s;
 }
