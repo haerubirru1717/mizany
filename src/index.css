@@ -76,24 +76,29 @@ body {
   animation: viewFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Flowing shimmer light sweep inside the progress arc (hulu -> hilir) */
+/* Minimalist Material-style tonal sheen gliding calmly along the progress arc */
 @keyframes arcShimmerFlow {
   0% {
-    stroke-dashoffset: 90;
+    stroke-dashoffset: 130;
     opacity: 0;
   }
-  12% {
+  8% {
     opacity: 1;
   }
-  75% {
+  48% {
+    stroke-dashoffset: -390;
     opacity: 1;
+  }
+  54% {
+    stroke-dashoffset: -410;
+    opacity: 0;
   }
   100% {
-    stroke-dashoffset: -400;
+    stroke-dashoffset: -410;
     opacity: 0;
   }
 }
 
 .arc-shimmer {
-  animation: arcShimmerFlow 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: arcShimmerFlow 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
