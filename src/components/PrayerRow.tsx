@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { Sunrise, Sun, Sunset, Moon, Sparkles } from 'lucide-react'
 
 interface PrayerItem {
@@ -29,6 +29,36 @@ export const PrayerRow: React.FC<PrayerRowProps> = ({
   city,
   onSelectPrayer,
 }) => {
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+  const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+
+  const nextPrayerId = prayers.find((p) => p.isNext)?.id
+
+  // Auto-center the active next-prayer card horizontally (never scrolls the page vertically,
+  // and only re-runs when the active next prayer actually changes so manual swipes aren't fought)
+  useEffect(() => {
+    if (!nextPrayerId) return
+    const container = scrollContainerRef.current
+    const activeEl = itemRefs.current[nextPrayerId]
+    if (!container || !activeEl) return
+
+    const rafId = requestAnimationFrame(() => {
+      const containerRect = container.getBoundingClientRect()
+      const itemRect = activeEl.getBoundingClientRect()
+      const itemCenter = itemRect.left - containerRect.left + itemRect.width / 2
+      const desiredLeft = container.scrollLeft + itemCenter - containerRect.width / 2
+      const maxLeft = Math.max(0, container.scrollWidth - container.clientWidth)
+      const clampedLeft = Math.max(0, Math.min(maxLeft, desiredLeft))
+
+      container.scrollTo({
+        left: clampedLeft,
+        behavior: 'smooth',
+      })
+    })
+
+    return () => cancelAnimationFrame(rafId)
+  }, [nextPrayerId])
+
   const getIcon = (id: string) => {
     switch (id) {
       case 'subuh':
@@ -56,12 +86,18 @@ export const PrayerRow: React.FC<PrayerRowProps> = ({
         </span>
       </div>
 
-      {/* Horizontal scrollable row */}
-      <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+      {/* Horizontal scrollable row — auto-focuses active next prayer */}
+      <div
+        ref={scrollContainerRef}
+        className="flex gap-2.5 overflow-x-auto pt-1 pb-2.5 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0"
+      >
         {prayers.map((p) => {
           return (
             <button
               key={p.id}
+              ref={(el) => {
+                itemRefs.current[p.id] = el
+              }}
               type="button"
               onClick={() => onSelectPrayer?.(p)}
               className={`flex-1 min-w-[76px] p-3 rounded-2xl flex flex-col items-center justify-center transition-all duration-200 cursor-pointer ${
