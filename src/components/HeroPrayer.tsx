@@ -23,19 +23,20 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
 }) => {
   const targetOffset = 115
   const [animatedOffset, setAnimatedOffset] = useState(384)
-  const isArcReady = animatedOffset < 384
-
-  const progress = Math.max(0, Math.min(1, (384 - targetOffset) / 384))
-  const angle = Math.PI * (1 - progress)
-  const tipX = 150 + 122 * Math.cos(angle)
-  const tipY = 156 - 122 * Math.sin(angle)
+  const [isSettled, setIsSettled] = useState(false)
 
   useEffect(() => {
     // Animate arc sweeping from 0 to target progress smoothly
-    const timer = setTimeout(() => {
+    const startTimer = setTimeout(() => {
       setAnimatedOffset(targetOffset)
     }, 150)
-    return () => clearTimeout(timer)
+    const settleTimer = setTimeout(() => {
+      setIsSettled(true)
+    }, 1550)
+    return () => {
+      clearTimeout(startTimer)
+      clearTimeout(settleTimer)
+    }
   }, [])
 
   return (
@@ -82,7 +83,12 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
 
       {/* Circular Arc Gauge */}
       <div className="relative z-10 -mt-2 sm:mt-0 max-w-[310px] mx-auto">
-        <svg viewBox="0 0 300 168" className="w-full h-auto drop-shadow-sm" fill="none">
+        <svg
+          viewBox="0 0 300 168"
+          className="w-full h-auto drop-shadow-sm"
+          fill="none"
+          style={{ '--arc-offset': targetOffset } as React.CSSProperties}
+        >
           <defs>
             <linearGradient id="heroGrad" x1="0" y1="1" x2="1" y2="0">
               <stop offset="0%" stopColor="#0F50BD" />
@@ -97,7 +103,11 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
                 strokeLinecap="round"
                 strokeDasharray="384"
                 strokeDashoffset={animatedOffset}
-                className="transition-all duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+                className={
+                  isSettled
+                    ? 'arc-tip-breathe'
+                    : 'transition-[stroke-dashoffset] duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]'
+                }
               />
             </mask>
           </defs>
@@ -108,7 +118,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
             strokeWidth="17"
             strokeLinecap="round"
           />
-          {/* Active progress track */}
+          {/* Active progress track with gentle forward-backward breathing at tip */}
           <path
             d="M28 156 A122 122 0 0 1 272 156"
             stroke="url(#heroGrad)"
@@ -116,51 +126,33 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
             strokeLinecap="round"
             strokeDasharray="384"
             strokeDashoffset={animatedOffset}
-            className="transition-all duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+            className={
+              isSettled
+                ? 'arc-tip-breathe'
+                : 'transition-[stroke-dashoffset] duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]'
+            }
           />
           {/* Synchronized wipe: translucent wash leads, exact heroGrad color sweeps right behind */}
-          <g mask="url(#arcFillMask)">
-            <path
-              d="M28 156 A122 122 0 0 1 272 156"
-              stroke="rgba(255, 255, 255, 0.34)"
-              strokeWidth="17"
-              strokeLinecap="round"
-              strokeDasharray="384"
-              className="arc-wave-transparent"
-            />
-            <path
-              d="M28 156 A122 122 0 0 1 272 156"
-              stroke="url(#heroGrad)"
-              strokeWidth="17.6"
-              strokeLinecap="round"
-              strokeDasharray="384"
-              className="arc-wave-color"
-            />
-          </g>
-          {/* Minimalist beacon indicator at the downstream tip (ujung hilir) */}
-          <g
-            transform={`translate(${tipX}, ${tipY})`}
-            className={`transition-opacity duration-500 delay-[1150ms] ${
-              isArcReady ? 'opacity-100' : 'opacity-0'
-            }`}
-          >
-            <circle
-              cx="0"
-              cy="0"
-              r="6"
-              fill="none"
-              stroke="#FFFFFF"
-              strokeWidth="2"
-              className="arc-tip-ripple"
-            />
-            <circle
-              cx="0"
-              cy="0"
-              r="4.2"
-              fill="#FFFFFF"
-              className="arc-tip-dot"
-            />
-          </g>
+          {isSettled && (
+            <g mask="url(#arcFillMask)">
+              <path
+                d="M28 156 A122 122 0 0 1 272 156"
+                stroke="rgba(255, 255, 255, 0.34)"
+                strokeWidth="17"
+                strokeLinecap="round"
+                strokeDasharray="384"
+                className="arc-wave-transparent"
+              />
+              <path
+                d="M28 156 A122 122 0 0 1 272 156"
+                stroke="url(#heroGrad)"
+                strokeWidth="17.6"
+                strokeLinecap="round"
+                strokeDasharray="384"
+                className="arc-wave-color"
+              />
+            </g>
+          )}
         </svg>
 
         {/* Text inside arc */}

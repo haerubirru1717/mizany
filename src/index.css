@@ -130,51 +130,26 @@ body {
 .arc-wave-transparent {
   stroke-dashoffset: 384;
   animation: arcWipeTransparent 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  animation-delay: 1.4s;
 }
 
 .arc-wave-color {
   stroke-dashoffset: 384;
   animation: arcWipeColor 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  animation-delay: 1.4s;
 }
 
-/* Minimalist beacon ripple at the downstream tip (ujung hilir) synced with wave arrival */
-@keyframes arcTipRipple {
-  0%, 26% {
-    transform: scale(0.9);
-    opacity: 0;
+/* Subtle forward-backward breathing right at the active progress tip (ujung hilir) */
+@keyframes arcTipBreathe {
+  0%, 20% {
+    stroke-dashoffset: var(--arc-offset);
   }
-  32% {
-    transform: scale(1.05);
-    opacity: 0.65;
+  44% {
+    stroke-dashoffset: calc(var(--arc-offset) - 10);
   }
-  68% {
-    transform: scale(2.5);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(2.5);
-    opacity: 0;
+  72%, 100% {
+    stroke-dashoffset: var(--arc-offset);
   }
 }
 
-@keyframes arcTipDot {
-  0%, 26%, 56%, 100% {
-    transform: scale(1);
-  }
-  38% {
-    transform: scale(1.16);
-  }
-}
-
-.arc-tip-ripple {
-  opacity: 0;
-  animation: arcTipRipple 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  animation-delay: 1.4s;
-}
-
-.arc-tip-dot {
-  animation: arcTipDot 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  animation-delay: 1.4s;
+.arc-tip-breathe {
+  animation: arcTipBreathe 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
