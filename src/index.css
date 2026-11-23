@@ -137,19 +137,28 @@ body {
   animation: arcWipeColor 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-/* Subtle forward-backward breathing right at the active progress tip (ujung hilir) */
-@keyframes arcTipBreathe {
-  0%, 20% {
+/* One-way forward-dissolving echo at the active progress tip (never retracts) */
+@keyframes arcTipForwardEcho {
+  0%, 24% {
     stroke-dashoffset: var(--arc-offset);
+    opacity: 0;
   }
-  44% {
-    stroke-dashoffset: calc(var(--arc-offset) - 10);
+  30% {
+    stroke-dashoffset: calc(var(--arc-offset) - 3);
+    opacity: 0.48;
   }
-  72%, 100% {
+  64% {
+    stroke-dashoffset: calc(var(--arc-offset) - 22);
+    opacity: 0;
+  }
+  65%, 100% {
     stroke-dashoffset: var(--arc-offset);
+    opacity: 0;
   }
 }
 
-.arc-tip-breathe {
-  animation: arcTipBreathe 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+.arc-tip-echo {
+  opacity: 0;
+  stroke-dashoffset: var(--arc-offset);
+  animation: arcTipForwardEcho 3.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }

@@ -103,11 +103,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
                 strokeLinecap="round"
                 strokeDasharray="384"
                 strokeDashoffset={animatedOffset}
-                className={
-                  isSettled
-                    ? 'arc-tip-breathe'
-                    : 'transition-[stroke-dashoffset] duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]'
-                }
+                className="transition-[stroke-dashoffset] duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
               />
             </mask>
           </defs>
@@ -118,7 +114,18 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
             strokeWidth="17"
             strokeLinecap="round"
           />
-          {/* Active progress track with gentle forward-backward breathing at tip */}
+          {/* One-way forward-dissolving echo behind tip — pushes forward into white track and fades out */}
+          {isSettled && (
+            <path
+              d="M28 156 A122 122 0 0 1 272 156"
+              stroke="url(#heroGrad)"
+              strokeWidth="17"
+              strokeLinecap="round"
+              strokeDasharray="384"
+              className="arc-tip-echo"
+            />
+          )}
+          {/* Stationary active progress track */}
           <path
             d="M28 156 A122 122 0 0 1 272 156"
             stroke="url(#heroGrad)"
@@ -126,11 +133,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
             strokeLinecap="round"
             strokeDasharray="384"
             strokeDashoffset={animatedOffset}
-            className={
-              isSettled
-                ? 'arc-tip-breathe'
-                : 'transition-[stroke-dashoffset] duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]'
-            }
+            className="transition-[stroke-dashoffset] duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
           />
           {/* Synchronized wipe: translucent wash leads, exact heroGrad color sweeps right behind */}
           {isSettled && (
