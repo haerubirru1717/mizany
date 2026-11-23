@@ -1,0 +1,2058 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" href="data:," />
+    <title>Mizany — Prototipe</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root{
+        color-scheme: light;
+        --bg:#FFFFFF;
+        --bg-outer:#FFFFFF;
+        --card:rgba(255,255,255,.90);
+        --card-solid:#FFFFFF;
+        --card-2:rgba(139,160,243,.12);
+        --line:rgba(16,24,40,.08);
+        --line-strong:rgba(82,82,82,.32);
+        --glass:rgba(255,255,255,.90);
+        --glass-strong:rgba(255,255,255,.92);
+        --glass-border:rgba(255,255,255,.85);
+        --glass-line:rgba(16,24,40,.07);
+        --glass-shadow:0 6px 20px rgba(25,65,181,.05), 0 1px 4px rgba(16,24,40,.03), inset 0 1px 0 rgba(255,255,255,.95);
+        --glass-shadow-sm:0 3px 10px rgba(25,65,181,.04), inset 0 1px 0 rgba(255,255,255,.9);
+        --glass-blur:blur(14px) saturate(140%);
+        --blue:#0F50BD;
+        --blue-deep:#1941B5;
+        --blue-dark:#1941B5;
+        --blue-ink:#101828;
+        --ink:#101828;
+        --muted:#525252;
+        --muted-2:rgba(82,82,82,.75);
+        --peri:#8BA0F3;
+        --teal:#14B8A6;
+        --amber:#F59E0B;
+        --shadow:0 6px 20px rgba(25,65,181,.05), 0 1px 4px rgba(16,24,40,.03), inset 0 1px 0 rgba(255,255,255,.95);
+        --shadow-sm:0 3px 10px rgba(25,65,181,.04), inset 0 1px 0 rgba(255,255,255,.9);
+        --radius:18px;
+      }
+      *{ box-sizing:border-box; }
+      html,body{ margin:0; padding:0; width:100%; min-height:100dvh; }
+      body{
+        background:
+          radial-gradient(720px 300px at 50% -80px, rgba(139,160,243,.10), rgba(139,160,243,0) 70%),
+          linear-gradient(180deg, #F7F9FF 0%, #FFFFFF 180px, #FFFFFF 100%);
+        background-attachment:fixed;
+        color:var(--ink);
+        font-family:"Poppins", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        font-size:16px;
+        -webkit-font-smoothing:antialiased;
+        line-height:1.5;
+      }
+      /* Soft blurred shapes fixed behind content — the wash the glass frosts over */
+      body::before, body::after{
+        content:""; position:fixed; border-radius:50%; pointer-events:none; z-index:0;
+        filter:blur(70px);
+      }
+      body::before{ width:340px; height:340px; top:16%; left:-130px; background:rgba(139,160,243,.12); }
+      body::after{ display:none; }
+      button{ font:inherit; color:inherit; background:none; border:0; cursor:pointer; padding:0; }
+      button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible{
+        outline:2px solid var(--blue); outline-offset:2px; border-radius:6px;
+      }
+      svg{ display:block; }
+      .stage{
+        width:100%; max-width:none; margin:0; min-height:100dvh;
+        background:transparent; position:relative; overflow-x:hidden; z-index:1;
+      }
+
+      /* ---------- Onboarding ---------- */
+      #onboarding{ min-height:100dvh; display:flex; flex-direction:column; padding:calc(28px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom)); width:100%; }
+      .brand{ display:flex; align-items:center; gap:10px; }
+      .brand .mark{ color:var(--blue); }
+      .brand .name{ font-size:22px; font-weight:700; letter-spacing:.2px; }
+      .brand .tag{ margin-left:auto; font-size:12px; color:var(--muted); font-weight:600; }
+      .segments{ display:flex; gap:6px; margin:26px 0 8px; }
+      .segments span{ flex:1; height:4px; border-radius:99px; background:var(--line); overflow:hidden; position:relative; }
+      .segments span.on{ background:var(--blue); }
+      .slides{ overflow:hidden; flex:1; display:flex; }
+      .track{ display:flex; width:100%; transition:transform .55s cubic-bezier(.22,.8,.28,1); }
+      .slide{ min-width:100%; padding:18px 2px 0; display:flex; flex-direction:column; }
+      .slide .art{
+        background:var(--blue-deep); border-radius:16px;
+        padding:10px; margin-bottom:26px; box-shadow:var(--shadow);
+      }
+      .slide h2{ font-size:28px; line-height:1.25; font-weight:700; margin:0 0 10px; }
+      .slide p{ color:var(--muted); font-size:15.5px; margin:0; max-width:32ch; }
+      .slide p strong{ color:var(--ink); font-weight:700; }
+      .ob-actions{ display:flex; align-items:center; gap:12px; padding-top:20px; }
+      .btn-ghost{
+        min-height:48px; padding:0 18px; border-radius:12px; font-weight:700; color:var(--muted);
+        border:1px solid var(--glass-border); background:var(--glass);
+        -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+        box-shadow:var(--glass-shadow-sm);
+      }
+      .btn-gold{
+        min-height:48px; padding:0 26px; border-radius:99px; font-weight:700;
+        background:var(--blue); color:#FFFFFF; margin-left:auto; flex:1;
+        display:inline-flex; align-items:center; gap:8px; box-shadow:var(--shadow-sm);
+      }
+      .btn-gold:active{ background:var(--blue-deep); }
+
+      /* ---------- App shell ---------- */
+      #app[hidden]{ display:none; }
+      main{ padding:10px 20px 118px; }
+      .view{ display:none; }
+      .view.active{ display:block; }
+      h1.page{ font-size:28px; font-weight:700; margin:8px 0 2px; line-height:1.3; }
+      h2.section{ font-size:20px; font-weight:700; margin:26px 0 2px; line-height:1.3; }
+      .sub{ color:var(--muted); font-size:14px; margin:0; }
+      .demo-foot{
+        color:var(--muted-2); font-size:12px; font-weight:600;
+        text-align:center; margin:26px 0 0;
+      }
+      .card{
+        background:var(--glass); border:1px solid var(--glass-border); border-radius:var(--radius);
+        padding:18px; margin-top:16px; box-shadow:var(--glass-shadow);
+        -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+      }
+      .card h3{ margin:0; font-size:16px; font-weight:700; }
+      .card-head{ display:flex; align-items:baseline; gap:10px; }
+      .card-head .right{ margin-left:auto; font-size:13px; color:var(--muted); font-weight:600; }
+
+      /* Hero — panel biru full-bleed dari tepi atas + busur ala referensi */
+      .hero{
+        position:relative; overflow:hidden; margin:-10px -20px 0; cursor:pointer;
+        background:var(--blue-deep); color:#FFFFFF;
+        padding:calc(18px + env(safe-area-inset-top)) 20px 16px;
+      }
+      .hero-top{ display:flex; align-items:flex-start; gap:12px; position:relative; z-index:3; }
+      .hero-date{ display:flex; align-items:baseline; gap:6px; flex-wrap:nowrap; white-space:nowrap; line-height:1.3; }
+      .hero-hijri{ font-size:15.5px; font-weight:700; color:#FFFFFF; letter-spacing:-.1px; }
+      .hero-sep{ font-size:12.5px; font-weight:600; color:#8BA0F3; }
+      .hero-greg{ font-size:12.5px; font-weight:600; color:rgba(255,255,255,.82); }
+      .hero-city{ display:flex; align-items:center; gap:6px; font-size:16.5px; font-weight:700; margin-top:4px; }
+      .hero-city svg{ color:#8BA0F3; flex:none; }
+      .hero-bell{
+        margin-left:auto; width:44px; height:44px; flex:none; border-radius:12px;
+        background:rgba(255,255,255,.22); color:#FFFFFF;
+        border:1px solid rgba(255,255,255,.45);
+        -webkit-backdrop-filter:blur(12px) saturate(140%); backdrop-filter:blur(12px) saturate(140%);
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 4px 14px rgba(16,24,40,.12);
+        display:flex; align-items:center; justify-content:center; position:relative;
+      }
+      .hero-bell::after{ content:""; position:absolute; top:10px; right:11px; width:7px; height:7px; border-radius:99px; background:#DC2626; }
+      .hero-gauge{ position:relative; z-index:1; margin-top:14px; max-width:560px; margin-left:auto; margin-right:auto; width:100%; }
+      .hero-gauge svg{ width:100%; height:auto; }
+      .hero-gauge-tx{
+        position:absolute; left:0; right:0; bottom:2px; text-align:center; pointer-events:none;
+      }
+      .hero-next-name{ font-size:34px; font-weight:700; line-height:1.1; letter-spacing:-.5px; }
+      .hero-remain{ font-size:14px; font-weight:600; color:rgba(255,255,255,.82); margin-top:2px; }
+      .hero-pill{
+        display:inline-block; margin-top:9px; background:rgba(255,255,255,.14);
+        border:1px solid rgba(255,255,255,.16); border-radius:99px; padding:5px 16px;
+        -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+        box-shadow:none;
+        font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:.5px;
+      }
+      .hero-mosque{ position:absolute; left:50%; transform:translateX(-50%); bottom:0; width:150%; height:180px; z-index:0; pointer-events:none; opacity:.92; }
+      .hero-weather{
+        position:relative; z-index:2; display:flex; align-items:center; gap:9px;
+        margin-top:16px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.16);
+        -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+        box-shadow:none;
+        border-radius:14px; padding:11px 14px; font-size:14.5px; font-weight:700;
+      }
+      .hero-weather .wic{ color:var(--amber); display:flex; flex:none; }
+      .hero-weather .wtime{ margin-left:auto; font-variant-numeric:tabular-nums; font-weight:700; }
+      .hero-detail-hint{
+        position:relative; z-index:2;
+        display:inline-flex; align-items:center; gap:5px; margin-top:12px;
+        color:rgba(255,255,255,.82); font-size:12px; font-weight:700;
+      }
+
+      /* Quick actions — 3 tile */
+      .quick{
+        display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:16px;
+      }
+      .q-tile{
+        min-height:96px; border-radius:16px; background:var(--glass); border:1px solid var(--glass-border);
+        box-shadow:var(--glass-shadow-sm);
+        -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+        display:flex; flex-direction:column;
+        align-items:center; justify-content:center; gap:8px; padding:12px 4px;
+        font-size:14px; font-weight:700; color:var(--ink);
+      }
+      .q-tile:active{ background:var(--card-2); }
+      .q-ic{ color:var(--blue); display:flex; align-items:center; justify-content:center; }
+
+      /* Prayer times row */
+      .prayer-head{ display:flex; align-items:baseline; margin-top:24px; }
+      .prayer-head h3{ margin:0; font-size:20px; font-weight:700; }
+      .prayer-head .loc{ margin-left:auto; font-size:12.5px; color:var(--muted); font-weight:600; display:inline-flex; align-items:center; gap:5px; }
+      .prayer-row{ display:flex; gap:7px; margin-top:12px; }
+      .p-chip{
+        flex:1; min-width:0; text-align:center; background:var(--glass);
+        border:1px solid var(--glass-border); border-radius:14px; padding:10px 1px 9px;
+        -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+        color:var(--muted); font-size:11.5px; font-weight:700; box-shadow:var(--glass-shadow-sm);
+      }
+      .p-chip .ic{ color:var(--amber); display:flex; justify-content:center; margin-bottom:5px; }
+      .p-chip b{ display:block; font-size:13.5px; color:var(--ink); font-variant-numeric:tabular-nums; margin-top:2px; }
+      .p-chip.done{ color:var(--muted-2); }
+      .p-chip.done b{ color:var(--muted); }
+      .p-chip.done .ic{ color:var(--muted-2); }
+      .p-chip.next{ background:var(--card-2); border-color:var(--blue); color:var(--blue-deep); }
+      .p-chip.next b{ color:var(--blue-dark); }
+      .p-chip.next .ic{ color:var(--amber); }
+      .prayer-note{ color:var(--muted); font-size:12.5px; margin-top:10px; }
+      button.p-chip{ font:inherit; cursor:pointer; }
+      button.p-chip:active{ border-color:var(--blue); }
+
+      /* Prayer Tracker banner */
+      .tracker-banner{
+        width:100%; text-align:left; margin-top:16px; cursor:pointer;
+        background:var(--blue-deep); color:#FFFFFF; border-radius:16px;
+        padding:18px; display:flex; align-items:center; gap:14px; box-shadow:var(--shadow);
+        position:relative; overflow:hidden;
+      }
+      .tracker-banner:active{ background:var(--blue-dark); }
+      .tracker-banner .tb-star{ color:#8BA0F3; flex:none; position:relative; z-index:1; }
+      .tracker-banner .tb-tx{ flex:1; min-width:0; position:relative; z-index:1; }
+      .tracker-banner .tb-ttl{ font-size:19px; font-weight:700; line-height:1.3; display:block; }
+      .tracker-banner .tb-sub{ font-size:13px; color:rgba(255,255,255,.82); font-weight:600; display:block; margin-top:2px; }
+      .tracker-banner .tb-arrow{
+        width:44px; height:44px; flex:none; border-radius:99px; background:#FFFFFF; color:var(--blue-deep);
+        display:flex; align-items:center; justify-content:center; position:relative; z-index:1;
+      }
+      .tracker-banner .tb-mosque{ position:absolute; right:0; bottom:0; width:315px; height:93px; opacity:.9; }
+
+      /* ---------- Prayer Time detail ---------- */
+      .pt-panel{
+        margin:-10px -20px 0; padding:18px 20px 30px;
+        background:var(--blue-deep); color:#FFFFFF;
+        border-radius:0 0 26px 26px;
+      }
+      .pt-head{ display:flex; align-items:center; gap:12px; }
+      .pt-back{
+        width:44px; height:44px; flex:none; border-radius:99px; color:#FFFFFF;
+        background:rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.45);
+        -webkit-backdrop-filter:blur(12px) saturate(140%); backdrop-filter:blur(12px) saturate(140%);
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.5);
+        display:flex; align-items:center; justify-content:center;
+      }
+      .pt-back:active{ background:rgba(255,255,255,.34); }
+      .pt-title{ flex:1; text-align:center; font-size:18px; font-weight:700; margin-right:44px; }
+      .pt-gauge{ position:relative; margin-top:20px; max-width:560px; margin-left:auto; margin-right:auto; width:100%; }
+      .pt-gauge svg{ width:100%; height:auto; }
+      .pt-gauge-tx{
+        position:absolute; left:0; right:0; bottom:6px; text-align:center; pointer-events:none;
+      }
+      .pt-loc{ font-size:12.5px; font-weight:600; color:rgba(255,255,255,.82); }
+      .pt-clock{
+        font-size:54px; font-weight:700; line-height:1.05; letter-spacing:-1px;
+        font-variant-numeric:tabular-nums; margin-top:2px;
+      }
+      .pt-clock .sec{ font-size:20px; font-weight:700; color:#8BA0F3; letter-spacing:0; }
+      .pt-next{ font-size:12.5px; font-weight:600; color:rgba(255,255,255,.82); margin-top:3px; font-variant-numeric:tabular-nums; }
+      .pt-ends{ display:flex; justify-content:space-between; gap:12px; margin-top:18px; }
+      .pt-end{ display:flex; align-items:center; gap:9px; min-width:0; }
+      .pt-end .ic{ color:#8BA0F3; flex:none; display:flex; }
+      .pt-end .nm{ font-size:12.5px; font-weight:600; color:rgba(255,255,255,.82); display:block; }
+      .pt-end .tm{ font-size:15.5px; font-weight:700; font-variant-numeric:tabular-nums; display:block; }
+      .pt-end.right{ text-align:right; }
+      .pt-sheet{
+        position:relative; margin-top:-16px;
+        background:var(--glass-strong); border:1px solid var(--glass-border); border-radius:22px;
+        -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+        box-shadow:var(--glass-shadow); padding:20px 16px 10px;
+      }
+      .pt-sheet::before{
+        content:""; position:absolute; top:-5px; left:50%; transform:translateX(-50%);
+        width:10px; height:10px; border-radius:99px; background:var(--blue);
+        border:2px solid var(--bg);
+      }
+      .pt-list{ list-style:none; margin:0; padding:0; position:relative; }
+      .pt-list::before{
+        content:""; position:absolute; left:8px; top:26px; bottom:26px; width:2px;
+        background:var(--line); border-radius:99px;
+      }
+      .pt-item{ position:relative; padding:0 0 12px 34px; }
+      .pt-item:last-child{ padding-bottom:4px; }
+      .pt-dot{
+        position:absolute; left:2px; top:24px; width:14px; height:14px; border-radius:99px;
+        background:#FFFFFF; border:3px solid var(--line-strong); z-index:1;
+      }
+      .pt-item.next .pt-dot{ background:var(--blue); border-color:var(--blue); box-shadow:0 0 0 4px var(--card-2); }
+      .pt-card{
+        display:flex; align-items:center; gap:13px;
+        /* solid inner row — sits on the glass sheet, so no second blur (no glass-on-glass) */
+        background:rgba(255,255,255,.92); border:1px solid var(--glass-line); border-radius:14px;
+        padding:13px 14px; box-shadow:var(--shadow-sm);
+      }
+      .pt-item.next .pt-card{ background:rgba(139,160,243,.22); border-color:var(--blue); }
+      .pt-ic{
+        width:42px; height:42px; flex:none; border-radius:11px; background:var(--card-2);
+        display:flex; align-items:center; justify-content:center; color:var(--amber);
+      }
+      .pt-tx{ flex:1; min-width:0; }
+      .pt-name{ font-size:15.5px; font-weight:700; display:block; }
+      .pt-range{ font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums; display:block; margin-top:1px; }
+      .pt-spk{
+        width:44px; height:44px; flex:none; border-radius:11px;
+        display:flex; align-items:center; justify-content:center; color:var(--muted-2);
+      }
+      .pt-spk.on{ color:var(--blue); }
+      .pt-spk:active{ background:var(--card-2); }
+      .pt-foot{ color:var(--muted); font-size:12.5px; text-align:center; margin-top:14px; }
+
+      .pt-status{
+        flex:none; font-size:11px; font-weight:600; line-height:1;
+        padding:5px 9px; border-radius:99px; white-space:nowrap;
+      }
+      .pt-status.st-done{ background:rgba(82,82,82,.12); color:#525252; }
+      .pt-status.st-next{ background:#D9F2E3; color:#177245; }
+      .pt-status.st-up{ background:rgba(139,160,243,.25); color:#1941B5; }
+
+      /* ---------- Tasbih ---------- */
+      .tsb-head{
+        margin:-10px -20px 0; padding:calc(12px + env(safe-area-inset-top)) 14px 12px 8px;
+        background:var(--blue-deep); color:#FFFFFF;
+        display:flex; align-items:center; gap:6px;
+      }
+      .tsb-iconbtn{
+        width:44px; height:44px; flex:none; border-radius:99px; color:#FFFFFF;
+        display:flex; align-items:center; justify-content:center;
+      }
+      .tsb-iconbtn:active{ background:rgba(255,255,255,.16); }
+      .tsb-head .tsb-title{ flex:1; font-size:20px; font-weight:600; margin-left:2px; }
+      .tsb-heading{ text-align:center; font-size:20px; font-weight:700; margin:26px 0 0; }
+      .tsb-dhikr{ text-align:center; font-size:14.5px; font-weight:600; color:var(--blue); margin-top:3px; }
+      .tsb-circle-wrap{ display:flex; justify-content:center; margin-top:30px; }
+      .tsb-circle{
+        position:relative; width:min(78vw, 320px); aspect-ratio:1/1; border-radius:99px;
+        -webkit-tap-highlight-color:transparent;
+      }
+      .tsb-circle svg{ width:100%; height:100%; transform:rotate(-90deg); }
+      .tsb-circle:active{ transform:scale(.985); }
+      .tsb-circle-tx{
+        position:absolute; inset:0; display:flex; flex-direction:column;
+        align-items:center; justify-content:center; pointer-events:none;
+      }
+      .tsb-count{
+        font-size:92px; font-weight:700; line-height:1; letter-spacing:-2px;
+        color:var(--ink); font-variant-numeric:tabular-nums;
+      }
+      .tsb-circle.done .tsb-count{ color:var(--blue); }
+      .tsb-target{ font-size:27px; font-weight:600; color:var(--muted-2); margin-top:12px; font-variant-numeric:tabular-nums; }
+      .tsb-hint{ text-align:center; color:var(--muted); font-size:13px; margin-top:22px; }
+      .tsb-done-note{
+        text-align:center; margin:14px auto 0; max-width:300px;
+        background:#D9F2E3; color:#177245; font-size:13.5px; font-weight:700;
+        border-radius:12px; padding:10px 14px;
+      }
+      .tsb-done-note[hidden]{ display:none; }
+      .tsb-spacer{ height:190px; }
+      .tsb-bar{
+        position:fixed; left:16px; right:16px; bottom:calc(90px + env(safe-area-inset-bottom));
+        max-width:560px; margin:0 auto; z-index:15;
+        background:var(--glass-strong); border:1px solid var(--glass-border); border-radius:18px;
+        -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+        box-shadow:0 8px 20px rgba(25,65,181,.06), inset 0 1px 0 rgba(255,255,255,.95);
+        display:grid; grid-template-columns:repeat(4,1fr); padding:10px 6px 8px;
+      }
+      .tsb-ctl{
+        display:flex; flex-direction:column; align-items:center; gap:5px;
+        min-height:56px; justify-content:center; border-radius:12px;
+        font-size:12px; font-weight:600; color:var(--muted);
+      }
+      .tsb-ctl:active{ background:var(--card-2); }
+      .tsb-ctl .ic{ display:flex; color:var(--muted-2); }
+      .tsb-ctl.on{ color:var(--blue-deep); }
+      .tsb-ctl.on .ic{ color:var(--blue); }
+
+      /* Bottom sheets (picker tasbih) */
+      .sheet-overlay{
+        position:fixed; inset:0; background:rgba(16,24,40,.45); z-index:60;
+        opacity:0; pointer-events:none; transition:opacity .25s ease;
+      }
+      .sheet-overlay.show{ opacity:1; pointer-events:auto; }
+      .sheet{
+        position:fixed; left:0; right:0; bottom:0; z-index:61;
+        max-width:560px; margin:0 auto;
+        background:var(--glass-strong); border:1px solid var(--glass-border); border-bottom:0;
+        -webkit-backdrop-filter:blur(16px) saturate(140%); backdrop-filter:blur(16px) saturate(140%);
+        border-radius:22px 22px 0 0;
+        padding:10px 20px calc(20px + env(safe-area-inset-bottom));
+        transform:translateY(105%); transition:transform .3s cubic-bezier(.22,.8,.28,1);
+        box-shadow:0 -12px 30px rgba(16,24,40,.18);
+      }
+      .sheet.show{ transform:translateY(0); }
+      .sheet .grab{ width:40px; height:4px; border-radius:99px; background:var(--line); margin:2px auto 12px; }
+      .sheet-head{ display:flex; align-items:center; }
+      .sheet-head h3{ margin:0; font-size:17px; font-weight:700; flex:1; }
+      .sheet-close{
+        width:40px; height:40px; border-radius:99px; color:var(--muted);
+        display:flex; align-items:center; justify-content:center;
+      }
+      .sheet-close:active{ background:var(--card-2); }
+      .sheet-opt{
+        width:100%; display:flex; align-items:center; gap:12px; text-align:left;
+        min-height:56px; padding:8px 4px; border-top:1px solid var(--line);
+        font-size:15.5px; font-weight:600;
+      }
+      .sheet-opt:first-of-type{ border-top:0; }
+      .sheet-opt .ar{ margin-left:auto; font-size:19px; color:var(--blue); }
+      .sheet-opt .check{ margin-left:auto; color:var(--blue); display:none; }
+      .sheet-opt.sel{ color:var(--blue-deep); }
+      .sheet-opt.sel .check{ display:flex; }
+      .sheet-opt.sel .ar{ margin-left:0; }
+      .sheet-note{ color:var(--muted); font-size:12.5px; margin:8px 0 0; }
+
+      /* Streak strip */
+      .streak{ display:flex; align-items:center; gap:14px; }
+      .streak .flame{
+        width:46px; height:46px; border-radius:12px; flex:none;
+        background:var(--card-2);
+        display:flex; align-items:center; justify-content:center; color:var(--blue);
+      }
+      .streak .big{ font-size:20px; font-weight:700; line-height:1.2; }
+      .streak .small{ color:var(--muted); font-size:13px; }
+      .weekdots{ margin-left:auto; display:flex; gap:5px; }
+      .weekdots i{ width:9px; height:9px; border-radius:99px; background:var(--line); display:block; }
+      .weekdots i.on{ background:var(--teal); }
+      .weekdots i.today{ background:var(--blue); }
+
+      /* Progress bars */
+      .bar{ height:8px; border-radius:99px; background:var(--card-2); overflow:hidden; }
+      .bar i{ display:block; height:100%; border-radius:99px; background:var(--blue); transition:width .45s ease; }
+      .bar.green i{ background:var(--teal); }
+
+      /* Checklist */
+      .amal-list{ list-style:none; margin:14px 0 0; padding:0; }
+      .amal{
+        width:100%; display:flex; align-items:center; gap:13px; text-align:left;
+        min-height:58px; padding:9px 2px; border-top:1px solid var(--line);
+      }
+      .amal-list li:first-child .amal{ border-top:0; }
+      .box{
+        width:27px; height:27px; flex:none; border-radius:8px;
+        border:2px solid var(--line-strong); display:flex; align-items:center; justify-content:center;
+        transition:background-color .2s ease, border-color .2s ease;
+      }
+      .box svg path{
+        stroke-dasharray:26; stroke-dashoffset:26;
+        transition:stroke-dashoffset .28s ease .05s;
+      }
+      .amal.done .box{ background:var(--blue); border-color:var(--blue); animation:pop .3s ease; }
+      .amal.done .box svg path{ stroke-dashoffset:0; }
+      @keyframes pop{ 0%{ transform:scale(1);} 40%{ transform:scale(1.18);} 100%{ transform:scale(1);} }
+      .amal-ic{ color:var(--muted); flex:none; display:flex; }
+      .amal.done .amal-ic{ color:var(--blue); }
+      .amal-tx{ flex:1; min-width:0; }
+      .amal-name{ font-weight:700; font-size:15.5px; display:block; }
+      .amal.done .amal-name{ color:var(--muted); }
+      .amal-note{ color:var(--muted-2); font-size:12.5px; display:block; }
+
+      /* Amal rows — tipe hitungan / target / nominal */
+      .amal-row{
+        display:flex; flex-direction:column; gap:10px;
+        min-height:58px; padding:12px 2px; border-top:1px solid var(--line);
+      }
+      .amal-list li:first-child .amal-row{ border-top:0; }
+      .amal-main{ display:flex; align-items:center; gap:13px; }
+      .amal-row.done .amal-ic{ color:var(--blue); }
+      .amal-row.done .amal-name{ color:var(--muted); }
+      .amal-ctrl{ margin-left:auto; display:flex; align-items:center; gap:7px; flex:none; }
+      .mini-step{
+        width:38px; height:38px; flex:none; border-radius:10px; border:1px solid var(--glass-line);
+        background:rgba(255,255,255,.92); display:flex; align-items:center; justify-content:center; color:var(--ink);
+      }
+      .mini-step:active{ border-color:var(--blue); color:var(--blue); }
+      .num-in{
+        width:70px; height:38px; min-height:38px; text-align:center; font-weight:700;
+        border-radius:10px; border:1px solid var(--glass-border); background:var(--glass);
+        color:var(--ink); font:inherit; font-size:15px; padding:0 6px;
+        font-variant-numeric:tabular-nums; box-shadow:var(--glass-shadow-sm);
+        -moz-appearance:textfield; appearance:textfield;
+      }
+      .num-in::-webkit-outer-spin-button, .num-in::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+      .num-in.wide{ width:110px; text-align:right; }
+      .rp-wrap{ display:flex; align-items:center; gap:5px; margin-left:auto; flex:none; }
+      .rp-pre{ font-weight:700; color:var(--muted); font-size:14px; }
+      .amal-prog{ margin-left:34px; }
+      .type-pick{
+        width:100%; min-height:50px; border-radius:12px; border:1px solid var(--glass-border);
+        background:var(--glass); color:var(--ink); font:inherit; font-size:15px; font-weight:600;
+        display:flex; align-items:center; gap:10px; padding:0 14px; text-align:left; margin-top:10px;
+        -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+        box-shadow:var(--glass-shadow-sm);
+      }
+      .type-pick .tp-val{ margin-left:auto; color:var(--blue-deep); font-weight:700; display:inline-flex; align-items:center; gap:6px; flex:none; }
+      .add-form-col{ display:flex; flex-direction:column; margin-top:2px; }
+      .add-form-col > input{ margin-top:10px; }
+      .add-target{ margin-top:10px; }
+      .add-target[hidden]{ display:none; }
+      .add-form-col .btn-gold{ margin:12px 0 0; justify-content:center; }
+      .sheet-opt .opt-tx{ flex:1; min-width:0; }
+      .sheet-opt .desc{ display:block; font-size:12.5px; color:var(--muted); font-weight:500; margin-top:1px; }
+      .custom-type{
+        font-size:11.5px; font-weight:700; color:var(--blue-deep); background:var(--card-2);
+        padding:4px 9px; border-radius:99px; flex:none; white-space:nowrap;
+      }
+
+      /* Quran view */
+      .last-read{
+        position:relative; overflow:hidden; margin-top:16px; border-radius:var(--radius);
+        /* frosted blue glass — translucent deep blue over the light wash, white text kept */
+        background:rgba(25,65,181,.88); border:1px solid rgba(255,255,255,.35);
+        -webkit-backdrop-filter:blur(14px) saturate(140%); backdrop-filter:blur(14px) saturate(140%);
+        padding:18px; color:#FFFFFF; box-shadow:0 8px 28px rgba(25,65,181,.22), inset 0 1px 0 rgba(255,255,255,.35);
+      }
+      .last-read .lab{ font-size:12.5px; font-weight:600; color:rgba(255,255,255,.82); }
+      .last-read .ttl{ font-size:23px; font-weight:700; margin-top:3px; }
+      .last-read .sub2{ font-size:13px; font-weight:600; margin-top:1px; color:rgba(255,255,255,.82); }
+      .last-read .mosque{ position:absolute; right:0; bottom:0; width:285px; height:102px; opacity:.9; }
+      .seg{
+        display:flex; gap:4px; background:rgba(139,160,243,.10); border:1px solid var(--glass-border);
+        -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+        border-radius:99px; padding:4px; margin-top:18px;
+      }
+      .seg button{
+        flex:1; min-height:44px; border-radius:99px; font-size:13.5px; font-weight:700; color:var(--muted);
+      }
+      .seg button.on{ background:rgba(255,255,255,.92); color:var(--ink); box-shadow:var(--shadow-sm); }
+      .q-list{ list-style:none; margin:8px 0 0; padding:0; }
+      .q-row{
+        width:100%; display:flex; align-items:center; gap:13px; text-align:left;
+        min-height:58px; padding:9px 2px; border-top:1px solid var(--line);
+      }
+      .q-list li:first-child .q-row{ border-top:0; }
+      .q-num{
+        width:30px; height:30px; flex:none; border-radius:9px; background:var(--card-2);
+        display:flex; align-items:center; justify-content:center;
+        font-size:12.5px; font-weight:700; color:var(--blue-deep); font-variant-numeric:tabular-nums;
+      }
+      .q-tx{ flex:1; min-width:0; }
+      .q-name{ font-weight:700; font-size:15.5px; display:block; }
+      .q-note{ color:var(--muted-2); font-size:12.5px; display:block; }
+      .q-ar{ font-size:19px; color:var(--blue); flex:none; }
+
+      /* Tilawah */
+      .til-big{ display:flex; align-items:baseline; gap:8px; margin-top:10px; }
+      .til-big .n{ font-size:30px; font-weight:700; font-variant-numeric:tabular-nums; }
+      .til-big .of{ color:var(--muted); font-size:14px; font-weight:600; }
+      .til-big .juz{ margin-left:auto; font-size:13px; font-weight:700; color:var(--blue-deep);
+        background:var(--card-2); padding:5px 11px; border-radius:99px; }
+      .stepper{ display:flex; align-items:center; gap:12px; margin-top:14px; }
+      .step-btn{
+        width:46px; height:46px; border-radius:12px; border:1px solid var(--glass-line);
+        /* solid fill inside glass cards — no nested blur */
+        background:rgba(255,255,255,.92); display:flex; align-items:center; justify-content:center; color:var(--ink);
+      }
+      .step-btn:active{ border-color:var(--blue); color:var(--blue); }
+      .stepper .hint{ color:var(--muted); font-size:13px; }
+      .khatam{ margin-top:16px; padding-top:14px; border-top:1px solid var(--line); }
+      .khatam .row{ display:flex; font-size:13px; color:var(--muted); font-weight:600; margin-bottom:8px; }
+      .khatam .row b{ color:var(--ink); margin-left:auto; font-variant-numeric:tabular-nums; }
+
+      .quote{ margin-top:22px; text-align:center; color:var(--muted); font-size:13.5px; padding:0 14px; }
+      .quote b{ color:var(--ink); font-weight:700; }
+
+      /* Calendar */
+      .cal-week{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:16px; }
+      .cal-week span{ text-align:center; font-size:12px; font-weight:700; color:var(--muted-2); padding:4px 0; }
+      .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:4px; }
+      .cal-day{
+        min-height:48px; border-radius:12px; border:1px solid var(--glass-border);
+        display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+        font-weight:700; font-size:15px; color:var(--ink); background:var(--glass);
+        -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+        font-variant-numeric:tabular-nums; box-shadow:var(--glass-shadow-sm);
+      }
+      .cal-day .ind{ height:12px; display:flex; align-items:center; color:var(--blue); }
+      .cal-day .ind .dot{ width:6px; height:6px; border-radius:99px; background:var(--blue); }
+      .cal-day.full{ background:var(--card-2); }
+      .cal-day.today{ border-color:var(--blue); color:var(--blue-deep); }
+      .cal-day.future{ color:var(--muted-2); background:transparent; box-shadow:none; }
+      .cal-day.sel{ outline:2px solid var(--blue); outline-offset:-2px; }
+      .cal-blank{ min-height:48px; }
+      .legend{ display:flex; gap:18px; margin-top:14px; font-size:12.5px; color:var(--muted); font-weight:600; flex-wrap:wrap; }
+      .legend span{ display:inline-flex; align-items:center; gap:7px; }
+      .legend .sw{ width:10px; height:10px; border-radius:99px; }
+      .day-detail .amal-mini{ list-style:none; margin:12px 0 0; padding:0; display:flex; flex-wrap:wrap; gap:8px; }
+      .day-detail .amal-mini li{
+        font-size:12.5px; font-weight:600; border:1px solid var(--line); border-radius:99px;
+        padding:6px 11px; display:inline-flex; gap:6px; align-items:center; color:var(--muted);
+        /* solid chip inside the glass day-detail card — no nested blur */
+        background:rgba(255,255,255,.92);
+      }
+      .day-detail .amal-mini li.yes{ color:var(--ink); border-color:var(--teal); }
+      .day-detail .amal-mini li.yes svg{ color:var(--teal); }
+
+      /* Rekap */
+      .chart{ display:flex; align-items:flex-end; gap:8px; height:168px; margin-top:18px; }
+      .col{ flex:1; display:flex; flex-direction:column; align-items:center; gap:7px; height:100%; justify-content:flex-end; }
+      .col .pct{ font-size:12px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums; }
+      .col .track{ width:100%; max-width:34px; flex:1; display:flex; align-items:flex-end; }
+      .col .fill{ width:100%; border-radius:7px 7px 3px 3px; background:var(--blue); min-height:5px; }
+      .col.today .fill{ background:var(--blue-deep); }
+      .col.today .pct{ color:var(--blue-deep); }
+      .col .dow{ font-size:12px; font-weight:700; color:var(--muted-2); }
+      .col.today .dow{ color:var(--blue-deep); }
+      .sumrow{ display:flex; gap:12px; padding:13px 0; border-top:1px solid var(--line); font-size:14.5px; }
+      .sumrow:first-of-type{ border-top:0; }
+      .sumrow .k{ color:var(--muted); }
+      .sumrow .v{ margin-left:auto; font-weight:700; text-align:right; font-variant-numeric:tabular-nums; }
+      .peramal{ margin-top:6px; }
+      .peramal .row{ display:flex; align-items:center; gap:12px; padding:9px 0; border-top:1px solid var(--line); }
+      .peramal .row:first-child{ border-top:0; }
+      .peramal .nm{ width:118px; flex:none; font-size:14px; font-weight:600; }
+      .peramal .bar{ flex:1; }
+      .peramal .vl{ width:38px; flex:none; text-align:right; font-size:13px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums; }
+
+      /* Pengaturan */
+      .set-label{ font-size:13px; font-weight:700; color:var(--muted); margin:22px 0 8px; letter-spacing:.2px; }
+      .set-label:first-of-type{ margin-top:14px; }
+      select, input[type="text"]{
+        width:100%; min-height:50px; border-radius:12px; border:1px solid var(--glass-border);
+        background:var(--glass); color:var(--ink); font:inherit; font-size:15px; padding:0 14px;
+        -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+        box-shadow:var(--glass-shadow-sm);
+      }
+      select{ appearance:none; -webkit-appearance:none;
+        background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2351638A' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat:no-repeat; background-position:right 14px center;
+      }
+      .target-row{ display:flex; align-items:center; gap:14px; }
+      .target-row .val{ font-size:22px; font-weight:700; min-width:110px; text-align:center; font-variant-numeric:tabular-nums; }
+      .target-row .val small{ display:block; font-size:12px; color:var(--muted); font-weight:600; }
+      .custom-list{ list-style:none; margin:0; padding:0; }
+      .custom-list li{
+        display:flex; align-items:center; gap:10px; min-height:52px;
+        border:1px solid var(--glass-border); border-radius:12px; padding:6px 8px 6px 14px; margin-top:8px;
+        background:var(--glass); font-weight:600; font-size:15px; box-shadow:var(--glass-shadow-sm);
+        -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+      }
+      .custom-list .del{
+        margin-left:auto; width:44px; height:44px; border-radius:10px; color:var(--muted);
+        display:flex; align-items:center; justify-content:center; flex:none;
+      }
+      .empty{
+        border:1px dashed var(--line-strong); border-radius:var(--radius); padding:22px 16px;
+        text-align:center; color:var(--muted); font-size:14px; margin-top:8px; background:var(--glass);
+        -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+      }
+      .empty .mark{ color:var(--blue); margin:0 auto 10px; width:30px; }
+      .add-form{ display:flex; gap:10px; margin-top:10px; }
+      .add-form input{ flex:1; }
+      .add-form .btn-gold{ margin-left:0; padding:0 20px; min-height:50px; flex:none; }
+      .disclaimer p{ color:var(--muted); font-size:14.5px; margin:8px 0 0; }
+      .disclaimer p b{ color:var(--ink); }
+      .fineprint{ color:var(--muted-2); font-size:12.5px; text-align:center; margin-top:26px; }
+
+      /* Tab bar — pill aktif ala referensi */
+      .tabbar{
+        position:fixed; bottom:calc(12px + env(safe-area-inset-bottom)); left:16px; right:16px;
+        width:auto; max-width:560px; margin:0 auto; z-index:20;
+        background:rgba(255,255,255,.92); border:1px solid var(--glass-border); border-radius:999px;
+        -webkit-backdrop-filter:blur(16px) saturate(150%); backdrop-filter:blur(16px) saturate(150%);
+        display:flex; align-items:center; justify-content:space-around; gap:4px;
+        padding:8px;
+        box-shadow:0 8px 20px rgba(25,65,181,.07), inset 0 1px 0 rgba(255,255,255,.95);
+      }
+      .tab{
+        min-height:48px; min-width:48px; display:flex; align-items:center; justify-content:center; gap:7px;
+        color:var(--muted-2); font-size:13px; font-weight:700; border-radius:99px; padding:0 10px;
+      }
+      .tab .tab-label{ display:none; }
+      .tab.active{ background:var(--blue); color:#FFFFFF; padding:0 18px; }
+      .tab.active .tab-label{ display:inline; }
+
+      /* Toast */
+      .toast{
+        position:fixed; left:50%; bottom:92px; transform:translate(-50%, 16px);
+        background:var(--blue-dark); color:#FFFFFF;
+        font-size:13.5px; font-weight:600; border-radius:12px; padding:11px 16px;
+        opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease;
+        z-index:40; max-width:calc(100vw - 48px); text-align:center;
+        box-shadow:var(--shadow);
+      }
+      .toast.show{ opacity:1; transform:translate(-50%, 0); }
+
+      @media (min-width:768px){
+        #onboarding{ padding-left:32px; padding-right:32px; }
+        .slide{ align-items:center; }
+        .slide .art{ width:100%; max-width:640px; }
+        .slide h2, .slide p{ width:100%; max-width:640px; }
+        .ob-actions, .brand, .segments{ width:100%; max-width:760px; margin-left:auto; margin-right:auto; }
+        .segments{ margin-top:26px; }
+      }
+      @media (prefers-reduced-motion: reduce){
+        *, *::before, *::after{ transition:none !important; animation:none !important; }
+        .box svg path{ stroke-dashoffset:0 !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+
+      <!-- Detailed mosque skyline artwork — one definition, reused as hero / banner / Quran-card background -->
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <defs>
+          <symbol id="mz-mosque-skyline" viewBox="0 0 800 180">
+            <g fill="#FFFFFF" opacity=".15">
+              <rect x="0" y="150" width="800" height="30"/>
+              <rect x="18" y="118" width="46" height="62"/>
+              <path d="M41 92c10 8 15 14 15 24H26c0-10 5-16 15-24Z"/>
+              <rect x="86" y="134" width="58" height="46"/>
+              <rect x="640" y="130" width="52" height="50"/>
+              <path d="M666 106c9 7 14 12 14 22h-28c0-10 5-15 14-22Z"/>
+              <rect x="716" y="116" width="48" height="64"/>
+              <path d="M740 92c9 7 14 12 14 22h-28c0-10 5-15 14-22Z"/>
+            </g>
+            <g fill="#FFFFFF" opacity=".46">
+              <rect x="112" y="170" width="576" height="10"/>
+              <rect x="120" y="140" width="44" height="32"/>
+              <path d="M142 118c10 7 15 13 15 22h-30c0-9 5-15 15-22Z"/>
+              <rect x="636" y="140" width="44" height="32"/>
+              <path d="M658 118c10 7 15 13 15 22h-30c0-9 5-15 15-22Z"/>
+              <rect x="182" y="84" width="12" height="88"/>
+              <rect x="173" y="100" width="30" height="8" rx="3"/>
+              <rect x="175" y="136" width="26" height="7" rx="3"/>
+              <rect x="184.5" y="62" width="7" height="40"/>
+              <path d="M188 34l11 30H177Z"/>
+              <rect x="187" y="25" width="2" height="10"/>
+              <circle cx="188" cy="22" r="2.6"/>
+              <rect x="606" y="84" width="12" height="88"/>
+              <rect x="597" y="100" width="30" height="8" rx="3"/>
+              <rect x="599" y="136" width="26" height="7" rx="3"/>
+              <rect x="608.5" y="62" width="7" height="40"/>
+              <path d="M612 34l11 30h-22Z"/>
+              <rect x="611" y="25" width="2" height="10"/>
+              <circle cx="612" cy="22" r="2.6"/>
+              <rect x="228" y="120" width="76" height="52"/>
+              <rect x="496" y="120" width="76" height="52"/>
+              <rect x="240" y="112" width="52" height="10"/>
+              <rect x="508" y="112" width="52" height="10"/>
+              <path d="M266 68c16 12 26 22 26 36 0 6-4 10-10 11h-32c-6-1-10-5-10-11 0-14 10-24 26-36Z"/>
+              <path d="M534 68c16 12 26 22 26 36 0 6-4 10-10 11h-32c-6-1-10-5-10-11 0-14 10-24 26-36Z"/>
+              <rect x="264.6" y="55" width="2.8" height="14"/>
+              <rect x="532.6" y="55" width="2.8" height="14"/>
+              <rect x="298" y="116" width="204" height="56"/>
+              <rect x="352" y="106" width="96" height="12" rx="2"/>
+              <path d="M400 30c26 20 42 36 42 60 0 12-8 20-18 22h-48c-10-2-18-10-18-22 0-24 16-40 42-60Z"/>
+              <rect x="398.4" y="14" width="3.2" height="18"/>
+              <path fill-rule="evenodd" d="M389 11a11 11 0 1 0 22 0 11 11 0 1 0-22 0Zm6.1 0a8.4 8.4 0 1 0 16.8 0 8.4 8.4 0 1 0-16.8 0Z"/>
+            </g>
+            <g fill="#1941B5" opacity=".5">
+              <path d="M386 172v-26a14 14 0 0 1 28 0v26Z"/>
+              <path d="M318 172v-20a9 9 0 0 1 18 0v20Z"/>
+              <path d="M350 172v-20a9 9 0 0 1 18 0v20Z"/>
+              <path d="M432 172v-20a9 9 0 0 1 18 0v20Z"/>
+              <path d="M464 172v-20a9 9 0 0 1 18 0v20Z"/>
+              <path d="M259 172v-16a7 7 0 0 1 14 0v16Z"/>
+              <path d="M527 172v-16a7 7 0 0 1 14 0v16Z"/>
+              <rect x="186" y="112" width="4" height="10" rx="2"/>
+              <rect x="610" y="112" width="4" height="10" rx="2"/>
+            </g>
+          </symbol>
+        </defs>
+      </svg>
+
+      <!-- ================= ONBOARDING ================= -->
+      <section id="onboarding" aria-label="Perkenalan Mizany">
+        <div class="brand">
+          <svg class="mark" width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.6 14.5 6 19.4 4.2 17.6 9.1 22 12 17.6 14.9 19.4 19.8 14.5 18 12 22.4 9.5 18 4.6 19.8 6.4 14.9 2 12 6.4 9.1 4.6 4.2 9.5 6Z"/></svg>
+          <span class="name">Mizany</span>
+          <span class="tag">Timbanganku</span>
+        </div>
+
+        <div class="segments" id="segments" aria-hidden="true"><span class="on"></span><span></span><span></span></div>
+
+        <div class="slides">
+          <div class="track" id="track">
+            <article class="slide">
+              <div class="art" aria-hidden="true">
+                <svg viewBox="0 0 260 180" width="100%" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="130" cy="90" r="72" stroke="#8BA0F3" stroke-width="2" stroke-dasharray="3 9"/>
+                  <circle cx="130" cy="90" r="52" stroke="#8BA0F3" stroke-width="2"/>
+                  <g transform="translate(88 48) scale(3.5)" stroke="#FFFFFF" stroke-width="1.1">
+                    <path d="M12 1.6 14.5 6 19.4 4.2 17.6 9.1 22 12 17.6 14.9 19.4 19.8 14.5 18 12 22.4 9.5 18 4.6 19.8 6.4 14.9 2 12 6.4 9.1 4.6 4.2 9.5 6Z"/>
+                  </g>
+                  <path d="M205 34a13 13 0 1 1-9-21 16 16 0 0 0 9 21Z" stroke="#8BA0F3" stroke-width="3"/>
+                  <circle cx="48" cy="42" r="2.4" fill="#8BA0F3" stroke="none" opacity=".8"/>
+                  <circle cx="222" cy="128" r="2.4" fill="#8BA0F3" stroke="none" opacity=".6"/>
+                  <circle cx="40" cy="140" r="2" fill="#8BA0F3" stroke="none" opacity=".5"/>
+                </svg>
+              </div>
+              <h2>Timbang amalmu hari ini. Jaga istiqamahmu setiap hari.</h2>
+              <p><strong>Mizany</strong> berarti <strong>timbanganku</strong>. Setiap amal akan ditimbang — Mizany membantumu mencatatnya hari demi hari, terutama di bulan Ramadan.</p>
+            </article>
+
+            <article class="slide">
+              <div class="art" aria-hidden="true">
+                <svg viewBox="0 0 260 180" width="100%" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="58" y="18" width="144" height="144" rx="14" stroke="#8BA0F3" stroke-width="2"/>
+                  <g stroke-width="3">
+                    <rect x="78" y="42" width="17" height="17" rx="5" fill="#FFFFFF" stroke="none"/>
+                    <path d="m82.5 50.5 3.5 3.5 6-7" stroke="#0F50BD"/>
+                    <path d="M108 50h62" stroke="#8BA0F3"/>
+                    <rect x="78" y="82" width="17" height="17" rx="5" stroke="#8BA0F3"/>
+                    <path d="M108 90h74" stroke="#8BA0F3"/>
+                    <rect x="78" y="122" width="17" height="17" rx="5" stroke="#8BA0F3"/>
+                    <path d="M108 130h50" stroke="#8BA0F3"/>
+                  </g>
+                  <path d="M222 140a11 11 0 1 1-7.5-18 13.5 13.5 0 0 0 7.5 18Z" stroke="#8BA0F3" stroke-width="3"/>
+                </svg>
+              </div>
+              <h2>Checklist amal harian, tanpa ribet</h2>
+              <p>Puasa, sholat lima waktu, tarawih, tilawah, dzikir, sampai sedekah — centang yang sudah dilakukan, lihat progresmu bertumbuh, dan tambah amal versimu sendiri.</p>
+            </article>
+
+            <article class="slide">
+              <div class="art" aria-hidden="true">
+                <svg viewBox="0 0 260 180" width="100%" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M66 30a34 34 0 1 0 24 58A40 40 0 0 1 66 30Z" stroke="#FFFFFF" stroke-width="3.5"/>
+                  <g stroke-width="3">
+                    <circle cx="140" cy="48" r="3" fill="#8BA0F3" stroke="none"/>
+                    <path d="M154 48h48" stroke="#8BA0F3"/>
+                    <circle cx="140" cy="82" r="3" fill="#8BA0F3" stroke="none"/>
+                    <path d="M154 82h62" stroke="#8BA0F3"/>
+                    <circle cx="140" cy="116" r="3" fill="#FFFFFF" stroke="none"/>
+                    <path d="M154 116h40" stroke="#8BA0F3"/>
+                  </g>
+                  <path d="M52 152c10-6 20-6 30 0 10-6 20-6 30 0v-24c-10-6-20-6-30 0-10-6-20-6-30 0Z" stroke="#8BA0F3" stroke-width="3"/>
+                  <path d="M82 128v24" stroke="#8BA0F3" stroke-width="3"/>
+                  <path d="M150 146h64M150 160h44" stroke="#8BA0F3" stroke-width="8"/>
+                </svg>
+              </div>
+              <h2>Jadwal sholat akurat, target tilawah jelas</h2>
+              <p>Jadwal sholat otomatis sesuai kotamu, lengkap dengan hitung mundur ke waktu berikutnya. Target tilawah harian membantumu khatam tepat waktu.</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="ob-actions">
+          <button class="btn-ghost" id="btnSkip" type="button">Lewati</button>
+          <button class="btn-gold" id="btnNext" type="button">
+            <span id="btnNextLabel">Lanjut</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= APP ================= -->
+      <div id="app" hidden>
+        <main>
+          <!-- ========== HOME ========== -->
+          <section class="view active" id="view-beranda" aria-label="Beranda">
+            <div class="hero" id="heroPrayer" role="button" tabindex="0" aria-label="Hitung mundur sholat berikutnya — ketuk untuk detail Prayer Time">
+              <div class="hero-top">
+                <div>
+                  <div class="hero-date"><span class="hero-hijri">12 Ramadan 1448 H</span><span class="hero-sep" aria-hidden="true">•</span><span class="hero-greg">19 Februari 2027</span></div>
+                  <div class="hero-city">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+                    <span id="prayerCity">Kota Tangerang</span>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8BA0F3" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                  </div>
+                </div>
+                <span class="hero-bell" aria-hidden="true">
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9a6 6 0 1 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9Z"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg>
+                </span>
+              </div>
+
+              <svg class="hero-mosque" viewBox="0 0 800 180" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><use href="#mz-mosque-skyline"/></svg>
+
+              <div class="hero-gauge" aria-hidden="true">
+                <svg viewBox="0 0 300 168" fill="none">
+                  <defs>
+                    <linearGradient id="heroGrad" x1="0" y1="1" x2="1" y2="0" gradientUnits="objectBoundingBox">
+                      <stop offset="0" stop-color="#0F50BD"/>
+                      <stop offset=".55" stop-color="#0F50BD"/>
+                      <stop offset="1" stop-color="#14B8A6"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M28 156 A122 122 0 0 1 272 156" stroke="#FFFFFF" stroke-width="17" stroke-linecap="round"/>
+                  <path id="heroArc" d="M28 156 A122 122 0 0 1 272 156" stroke="url(#heroGrad)" stroke-width="17" stroke-linecap="round" stroke-dasharray="0 400"/>
+                </svg>
+                <div class="hero-gauge-tx">
+                  <div class="hero-next-name" id="nextName">Maghrib</div>
+                  <div class="hero-remain">Sisa waktu · pukul <span id="nextTime">18:07</span></div>
+                  <span class="hero-pill" id="cdFull">2:41:09</span>
+                </div>
+              </div>
+
+              <div class="hero-weather">
+                <span class="wic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v1.5M5.6 5.6l1 1M18.4 5.6l-1 1"/><circle cx="12" cy="11" r="3.2"/><path d="M6 20h11a3.5 3.5 0 0 0 .6-6.95A5 5 0 0 0 8 15.5 3 3 0 0 0 6 20Z"/></svg></span>
+                <span>27°C&nbsp; Cerah</span>
+                <span class="wtime" id="weatherTime">10:08</span>
+              </div>
+              <span class="hero-detail-hint">Ketuk untuk detail Prayer Time
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+              </span>
+            </div>
+
+            <div class="quick" aria-label="Aksi cepat">
+              <button class="q-tile" type="button" data-act="quran">
+                <span class="q-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.2C10 4.7 7.4 4.2 4 4.2v13.6c3.4 0 6 .5 8 2 2-1.5 4.6-2 8-2V4.2c-3.4 0-6 .5-8 2Z"/><path d="M12 6.2v13.6"/></svg></span>
+                Quran
+              </button>
+              <button class="q-tile" type="button" data-act="tasbih">
+                <span class="q-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="10" r="6.5"/><path d="M12 16.5v2"/><circle cx="12" cy="21" r="1.4"/><circle cx="12" cy="3.5" r=".6" fill="currentColor"/><circle cx="6.5" cy="6" r=".6" fill="currentColor"/><circle cx="17.5" cy="6" r=".6" fill="currentColor"/><circle cx="5" cy="11" r=".6" fill="currentColor"/><circle cx="19" cy="11" r=".6" fill="currentColor"/></svg></span>
+                Tasbih
+              </button>
+              <button class="q-tile" type="button" data-act="kalender">
+                <span class="q-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5.5" width="16" height="15" rx="2.5"/><path d="M4 10.5h16"/><path d="M8.5 3.5v4M15.5 3.5v4"/></svg></span>
+                Kalender
+              </button>
+            </div>
+
+            <div class="prayer-head">
+              <h3>Prayer Times</h3>
+              <span class="loc">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+                <span id="prayerCity2">Kota Tangerang</span>
+              </span>
+            </div>
+            <div class="prayer-row" id="prayerRow"></div>
+            <p class="prayer-note">Metode Kemenag RI · waktu berikutnya ditandai biru · ketuk kartu untuk detail Prayer Time</p>
+
+            <button class="tracker-banner" id="trackerBanner" type="button" aria-label="Catat sholatmu setiap hari — lompat ke checklist">
+              <svg class="tb-mosque" viewBox="0 0 800 180" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><use href="#mz-mosque-skyline"/></svg>
+              <span class="tb-star"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.6 14.5 6 19.4 4.2 17.6 9.1 22 12 17.6 14.9 19.4 19.8 14.5 18 12 22.4 9.5 18 4.6 19.8 6.4 14.9 2 12 6.4 9.1 4.6 4.2 9.5 6Z"/></svg></span>
+              <span class="tb-tx">
+                <span class="tb-ttl">Catat sholatmu setiap hari</span>
+                <span class="tb-sub">Centang checklist amal hari ini di bawah</span>
+              </span>
+              <span class="tb-arrow"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span>
+            </button>
+
+            <div class="card streak" aria-label="Streak">
+              <div class="flame">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5Z"/></svg>
+              </div>
+              <div>
+                <div class="big">11 hari beruntun</div>
+                <div class="small">Checklist terisi sejak 1 Ramadan</div>
+              </div>
+              <div class="weekdots" aria-hidden="true">
+                <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="today"></i>
+              </div>
+            </div>
+
+            <div class="card" id="checklistCard" aria-label="Checklist amal harian">
+              <div class="card-head">
+                <h3>Checklist amal hari ini</h3>
+                <span class="right" id="amalCount">0 dari 8</span>
+              </div>
+              <div class="bar" style="margin-top:12px;"><i id="amalBar" style="width:0%"></i></div>
+              <ul class="amal-list" id="amalList"></ul>
+            </div>
+
+            <p class="quote">“Sebaik-baik amal adalah yang paling <b>konsisten</b>, meski sedikit.”<br /><span style="font-size:12px;">HR. Bukhari &amp; Muslim</span></p>
+            <p class="demo-foot">Data contoh — prototipe</p>
+          </section>
+
+          <!-- ========== PRAYER TIME DETAIL ========== -->
+          <section class="view" id="view-prayer" aria-label="Detail Prayer Time">
+            <div class="pt-panel">
+              <div class="pt-head">
+                <button class="pt-back" id="ptBack" type="button" aria-label="Kembali ke dashboard">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg>
+                </button>
+                <span class="pt-title">Prayer Time</span>
+              </div>
+
+              <div class="pt-gauge" aria-label="Jam sekarang">
+                <svg viewBox="0 0 300 168" fill="none" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="ptGrad" x1="0" y1="1" x2="1" y2="0" gradientUnits="objectBoundingBox">
+                      <stop offset="0" stop-color="#0F50BD"/>
+                      <stop offset=".55" stop-color="#0F50BD"/>
+                      <stop offset="1" stop-color="#14B8A6"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M48 156 A102 102 0 0 1 252 156 Z" fill="rgba(255,255,255,.08)"/>
+                  <path d="M28 156 A122 122 0 0 1 272 156" stroke="#FFFFFF" stroke-width="13"/>
+                  <path id="ptArc" d="M28 156 A122 122 0 0 1 272 156" stroke="url(#ptGrad)" stroke-width="13" stroke-linecap="round" stroke-dasharray="0 400"/>
+                </svg>
+                <div class="pt-gauge-tx">
+                  <div class="pt-loc" id="ptLoc">Kota Tangerang</div>
+                  <div class="pt-clock"><span id="ptClock">00:00</span><span class="sec" id="ptSec">:00</span></div>
+                  <div class="pt-next" id="ptNext">Menuju waktu berikutnya</div>
+                </div>
+              </div>
+
+              <div class="pt-ends">
+                <div class="pt-end">
+                  <span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16"/><path d="M7 20a5 5 0 0 1 10 0"/><path d="M12 7V4M5.6 10.6 3.9 8.9M18.4 10.6l1.7-1.7"/></svg></span>
+                  <span><span class="nm">Subuh</span><span class="tm">04.38</span></span>
+                </div>
+                <div class="pt-end right">
+                  <span><span class="nm">Buka Puasa</span><span class="tm">18.07</span></span>
+                  <span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16"/><path d="M7 20a5 5 0 0 1 10 0"/><path d="M12 10V7M5.6 13.4l-1.7 1.7M18.4 13.4l1.7 1.7"/></svg></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-sheet">
+              <ul class="pt-list" id="ptList"></ul>
+            </div>
+            <p class="pt-foot">Metode Kemenag RI · rentang waktu adalah jendela waktu sholat (data contoh)</p>
+          </section>
+
+          <!-- ========== TASBIH ========== -->
+          <section class="view" id="view-tasbih" aria-label="Tasbih">
+            <div class="tsb-head">
+              <button class="tsb-iconbtn" id="tsbBack" type="button" aria-label="Kembali ke dashboard">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg>
+              </button>
+              <span class="tsb-title">Tasbih</span>
+              <button class="tsb-iconbtn" id="tsbListBtn" type="button" aria-label="Pilih dzikir">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9M4 12h9M4 18h9"/><rect x="16.5" y="4" width="4" height="4" rx="1"/><rect x="16.5" y="10" width="4" height="4" rx="1"/><rect x="16.5" y="16" width="4" height="4" rx="1"/></svg>
+              </button>
+              <button class="tsb-iconbtn" id="tsbEditBtn" type="button" aria-label="Ubah target hitungan">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3.5a2.8 2.8 0 1 1 4 4L8 20.5l-5 1 1-5Z"/><path d="m14.5 6 4 4"/></svg>
+              </button>
+            </div>
+
+            <h2 class="tsb-heading">Tasbih</h2>
+            <p class="tsb-dhikr" id="tsbDhikrName">Subhanallah</p>
+
+            <div class="tsb-circle-wrap">
+              <button class="tsb-circle" id="tsbCircle" type="button" aria-label="Ketuk untuk menambah hitungan tasbih">
+                <svg viewBox="0 0 300 300" fill="none" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="tsbGrad" x1="0" y1="1" x2="1" y2="0" gradientUnits="objectBoundingBox">
+                      <stop offset="0" stop-color="#0F50BD"/>
+                      <stop offset="1" stop-color="#14B8A6"/>
+                    </linearGradient>
+                  </defs>
+                  <circle cx="150" cy="150" r="138" stroke="#EDF0F5" stroke-width="11"/>
+                  <circle id="tsbRing" cx="150" cy="150" r="138" stroke="url(#tsbGrad)" stroke-width="11" stroke-linecap="round" stroke-dasharray="867" stroke-dashoffset="867"/>
+                </svg>
+                <span class="tsb-circle-tx">
+                  <span class="tsb-count" id="tsbCount">0</span>
+                  <span class="tsb-target" id="tsbTarget">/ 33</span>
+                </span>
+              </button>
+            </div>
+
+            <p class="tsb-done-note" id="tsbDone" hidden>Target tercapai — Alhamdulillah. Ketuk Reset untuk memulai lagi.</p>
+            <p class="tsb-hint" id="tsbHint">Ketuk lingkaran untuk menghitung</p>
+
+            <div class="tsb-bar" role="group" aria-label="Kontrol tasbih">
+              <button class="tsb-ctl on" id="tsbSoundBtn" type="button" aria-pressed="true">
+                <span class="ic" id="tsbSoundIc"></span>
+                <span id="tsbSoundLbl">Suara: On</span>
+              </button>
+              <button class="tsb-ctl on" id="tsbVibBtn" type="button" aria-pressed="true">
+                <span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9.5" y="3" width="5.5" height="18" rx="1.8"/><path d="M5 8.5v7M2.8 10.5v3M19 8.5v7M21.2 10.5v3"/></svg></span>
+                <span id="tsbVibLbl">Getar: On</span>
+              </button>
+              <button class="tsb-ctl" id="tsbMinusBtn" type="button">
+                <span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12h7"/></svg></span>
+                <span>Kurangi</span>
+              </button>
+              <button class="tsb-ctl" id="tsbResetBtn" type="button">
+                <span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5v4.5h4.5"/><path d="M4.6 9.5A8.5 8.5 0 1 1 3.5 13"/></svg></span>
+                <span>Reset</span>
+              </button>
+            </div>
+            <div class="tsb-spacer" aria-hidden="true"></div>
+          </section>
+
+          <!-- ========== QURAN ========== -->
+          <section class="view" id="view-quran" aria-label="Quran dan tilawah">
+            <h1 class="page">Al-Quran</h1>
+            <p class="sub">Tilawah hari ini dan daftar bacaan</p>
+
+            <div class="last-read">
+              <div class="lab">Terakhir Dibaca</div>
+              <div class="ttl" id="lrTitle">Al-Fatihah</div>
+              <div class="sub2" id="lrSub">Ayat ke-1</div>
+              <svg class="mosque" viewBox="0 0 800 180" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><use href="#mz-mosque-skyline"/></svg>
+            </div>
+
+            <div class="seg" role="group" aria-label="Tampilan daftar Quran">
+              <button type="button" class="on" data-seg="surah">Surah</button>
+              <button type="button" data-seg="juz">Juz</button>
+              <button type="button" data-seg="halaman">Halaman</button>
+            </div>
+            <ul class="q-list" id="quranList"></ul>
+
+            <div class="card" aria-label="Tilawah">
+              <div class="card-head">
+                <h3>Tilawah hari ini</h3>
+                <span class="right">Al-Mulk · halaman 231</span>
+              </div>
+              <div class="til-big">
+                <span class="n" id="pagesNow">8</span>
+                <span class="of">dari <span id="pagesTarget">20</span> halaman</span>
+                <span class="juz">Juz 12</span>
+              </div>
+              <div class="bar green" style="margin-top:12px;"><i id="pagesBar" style="width:40%"></i></div>
+              <div class="stepper">
+                <button class="step-btn" id="pagesMinus" type="button" aria-label="Kurangi satu halaman">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+                </button>
+                <button class="step-btn" id="pagesPlus" type="button" aria-label="Tambah satu halaman">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                </button>
+                <span class="hint">Catat halaman yang sudah dibaca</span>
+              </div>
+              <div class="khatam">
+                <div class="row"><span>Progres khatam Ramadan ini</span><b>12 dari 30 juz</b></div>
+                <div class="bar green"><i style="width:40%"></i></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ========== KALENDER + REKAP ========== -->
+          <section class="view" id="view-kalender" aria-label="Kalender Ramadan">
+            <h1 class="page">Kalender Ramadan</h1>
+            <p class="sub">1448 H · 8 Februari – 9 Maret 2027</p>
+
+            <div class="cal-week" aria-hidden="true"><span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span><span>Ahd</span></div>
+            <div class="cal-grid" id="calGrid"></div>
+            <div class="legend">
+              <span><i class="sw" style="background:var(--teal);"></i> Tuntas</span>
+              <span><i class="sw" style="background:var(--blue);"></i> Sebagian</span>
+              <span><i class="sw" style="background:transparent;border:2px solid var(--blue);"></i> Hari ini</span>
+            </div>
+
+            <div class="card day-detail" id="dayDetail" aria-live="polite"></div>
+
+            <h2 class="section">Rekap pekan ini</h2>
+            <p class="sub">13 – 19 Februari 2027 · Ramadan hari ke-6 s.d. ke-12</p>
+
+            <div class="card">
+              <div class="card-head"><h3>Kelengkapan checklist per hari</h3></div>
+              <div class="chart" id="weekChart"></div>
+            </div>
+
+            <div class="card">
+              <div class="sumrow"><span class="k">Rata-rata pekan ini</span><span class="v" id="sumAvg">—</span></div>
+              <div class="sumrow"><span class="k">Hari terlengkap</span><span class="v">Ahad, 14 Feb · 8/8</span></div>
+              <div class="sumrow"><span class="k">Paling konsisten</span><span class="v">Sholat 5 waktu · 7/7</span></div>
+              <div class="sumrow"><span class="k">Perlu ditingkatkan</span><span class="v">Sedekah · 4/7</span></div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><h3>Per amal — 7 hari terakhir</h3></div>
+              <div class="peramal" id="perAmal"></div>
+            </div>
+          </section>
+
+          <!-- ========== PENGATURAN ========== -->
+          <section class="view" id="view-atur" aria-label="Pengaturan">
+            <h1 class="page">Pengaturan</h1>
+            <p class="sub">Sesuaikan Mizany dengan kebiasaanmu</p>
+
+            <p class="set-label">Kota untuk jadwal sholat</p>
+            <select id="citySelect" aria-label="Kota untuk jadwal sholat">
+              <option selected>Kota Tangerang</option>
+              <option>Jakarta</option>
+              <option>Bogor</option>
+              <option>Depok</option>
+              <option>Bekasi</option>
+              <option>Bandung</option>
+              <option>Semarang</option>
+              <option>Yogyakarta</option>
+              <option>Surabaya</option>
+              <option>Medan</option>
+              <option>Makassar</option>
+            </select>
+
+            <p class="set-label">Target tilawah harian</p>
+            <div class="target-row">
+              <button class="step-btn" id="targetMinus" type="button" aria-label="Kurangi target tilawah">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+              </button>
+              <div class="val"><span id="targetVal">20</span><small>halaman per hari</small></div>
+              <button class="step-btn" id="targetPlus" type="button" aria-label="Tambah target tilawah">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            </div>
+
+            <p class="set-label">Amal tambahan saya</p>
+            <div id="customWrap"></div>
+            <form class="add-form-col" id="addForm">
+              <input type="text" id="addInput" placeholder="Nama amal, mis. Sholat Dhuha" maxlength="40" aria-label="Nama amal tambahan" />
+              <button class="type-pick" id="typePickBtn" type="button" aria-haspopup="dialog">
+                <span>Tipe catatan</span>
+                <span class="tp-val"><span id="typePickVal">Ceklist</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+              </button>
+              <div class="add-target" id="addTargetRow" hidden>
+                <input type="number" class="num-in" id="addTargetInput" style="width:100%;text-align:left;" min="1" max="100000" inputmode="numeric" placeholder="Nilai target, mis. 20" aria-label="Nilai target amal" />
+              </div>
+              <button class="btn-gold" type="submit">Tambah amal</button>
+            </form>
+
+            <div class="card disclaimer">
+              <h3>Tentang streak &amp; skor</h3>
+              <p>Streak dan skor di Mizany <b>hanya alat bantu menjaga konsistensi</b> — bukan ukuran nilai amal, apalagi tanda diterimanya amal di sisi Allah. Hari yang terlewat bukan kegagalan; yang terpenting adalah niat, keikhlasan, dan kemauan untuk mulai lagi.</p>
+            </div>
+
+            <p class="fineprint">Mizany — prototipe UI/UX · Selalu gratis, tanpa iklan</p>
+          </section>
+        </main>
+
+        <div class="sheet-overlay" id="sheetOverlay"></div>
+
+        <div class="sheet" id="dhikrSheet" role="dialog" aria-modal="true" aria-label="Pilih dzikir" hidden>
+          <div class="grab" aria-hidden="true"></div>
+          <div class="sheet-head">
+            <h3>Pilih dzikir</h3>
+            <button class="sheet-close" type="button" data-close-sheet aria-label="Tutup pilihan dzikir">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+          <div id="dhikrOpts"></div>
+          <p class="sheet-note">Memilih dzikir mengulang hitungan dari 0.</p>
+        </div>
+
+        <div class="sheet" id="targetSheet" role="dialog" aria-modal="true" aria-label="Pilih target hitungan" hidden>
+          <div class="grab" aria-hidden="true"></div>
+          <div class="sheet-head">
+            <h3>Target hitungan</h3>
+            <button class="sheet-close" type="button" data-close-sheet aria-label="Tutup pilihan target">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+          <div id="targetOpts"></div>
+          <p class="sheet-note">Mengubah target mengulang hitungan dari 0.</p>
+        </div>
+
+        <div class="sheet" id="typeSheet" role="dialog" aria-modal="true" aria-label="Pilih tipe catatan amal" hidden>
+          <div class="grab" aria-hidden="true"></div>
+          <div class="sheet-head">
+            <h3>Pilih tipe catatan</h3>
+            <button class="sheet-close" type="button" data-close-sheet aria-label="Tutup pilihan tipe catatan">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+          <div id="typeOpts"></div>
+          <p class="sheet-note">Tipe menentukan cara amal ini dicatat di checklist harian.</p>
+        </div>
+
+        <nav class="tabbar" aria-label="Navigasi utama">
+          <button class="tab active" type="button" data-view="beranda">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11.2 12 4l8 7.2"/><path d="M6.2 9.6V20h11.6V9.6"/></svg>
+            <span class="tab-label">Home</span>
+          </button>
+          <button class="tab" type="button" data-view="quran">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.2C10 4.7 7.4 4.2 4 4.2v13.6c3.4 0 6 .5 8 2 2-1.5 4.6-2 8-2V4.2c-3.4 0-6 .5-8 2Z"/><path d="M12 6.2v13.6"/></svg>
+            <span class="tab-label">Quran</span>
+          </button>
+          <button class="tab" type="button" data-view="kalender">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5.5" width="16" height="15" rx="2.5"/><path d="M4 10.5h16"/><path d="M8.5 3.5v4M15.5 3.5v4"/></svg>
+            <span class="tab-label">Kalender</span>
+          </button>
+          <button class="tab" type="button" data-view="atur">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+            <span class="tab-label">Atur</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="toast" id="toast" role="status"></div>
+    </div>
+    <script>
+      (function(){
+        "use strict";
+        var $ = function(id){ return document.getElementById(id); };
+        function ic(paths){ return '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>'; }
+        var ICONS = {
+          sun:    ic('<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/>'),
+          dome:   ic('<path d="M5 20.5h14"/><path d="M7 20.5v-4.7c0-3 2.1-4.6 5-6.8 2.9 2.2 5 3.8 5 6.8v4.7"/><path d="M12 9.8V6"/><circle cx="12" cy="4.4" r="1.1"/>'),
+          moon:   ic('<path d="M20 13.6A8.2 8.2 0 1 1 10.4 4a6.6 6.6 0 0 0 9.6 9.6Z"/>'),
+          star:   '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.4 14.3 6.4 18.6 4.8 17 9.1 21 12 17 14.9 18.6 19.2 14.3 17.6 12 21.6 9.7 17.6 5.4 19.2 7 14.9 3 12 7 9.1 5.4 4.8 9.7 6.4Z"/></svg>',
+          book:   ic('<path d="M12 6.2C10 4.7 7.4 4.2 4 4.2v13.6c3.4 0 6 .5 8 2 2-1.5 4.6-2 8-2V4.2c-3.4 0-6 .5-8 2Z"/><path d="M12 6.2v13.6"/>'),
+          beads:  '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="11" r="7.2" stroke-dasharray="0.1 3.75"/></svg>',
+          gift:   ic('<rect x="4" y="10.5" width="16" height="9.5"/><path d="M12 10.5V20"/><path d="M4 7h16v3.5H4Z"/><path d="M12 7c-3.8 0-3.8-3.4-1.9-3.4C12 3.6 12 7 12 7Zm0 0c3.8 0 3.8-3.4 1.9-3.4C12 3.6 12 7 12 7Z"/>'),
+          bowl:   ic('<path d="M4 12.5h16"/><path d="M5.2 12.5a6.8 6.8 0 0 0 13.6 0"/><path d="M9.2 8.6c0-1.6 1.4-1.6 1.4-3.1M13.4 8.6c0-1.6 1.4-1.6 1.4-3.1"/>')
+        };
+        var PRAYER_ICONS = [
+          ic('<path d="M4 18h16"/><path d="M7 18a5 5 0 0 1 10 0"/><path d="M12 6V3.5M4.9 9.9l-1.7-1.7M19.1 9.9l1.7-1.7"/>'),
+          ic('<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/>'),
+          ic('<circle cx="12" cy="12" r="3.4"/><path d="M12 4.5v1.6M12 17.9v1.6M4.5 12h1.6M17.9 12h1.6M6.2 6.2l1.1 1.1M16.7 16.7l1.1 1.1M17.8 6.2l-1.1 1.1M7.3 16.7l-1.1 1.1"/>'),
+          ic('<path d="M4 18h16"/><path d="M7 18a5 5 0 0 1 10 0"/><path d="M12 9V6.5M4.9 12.5l-1.7 1.7M19.1 12.5l1.7 1.7"/>'),
+          ic('<path d="M20 13.6A8.2 8.2 0 1 1 10.4 4a6.6 6.6 0 0 0 9.6 9.6Z"/>')
+        ];
+        var CHECK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5 10 18 19.5 6.5"/></svg>';
+        var CHECK_SM = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5 10 18 19.5 6.5"/></svg>';
+        var STAR_MARK = '<svg class="mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.6 14.5 6 19.4 4.2 17.6 9.1 22 12 17.6 14.9 19.4 19.8 14.5 18 12 22.4 9.5 18 4.6 19.8 6.4 14.9 2 12 6.4 9.1 4.6 4.2 9.5 6Z"/></svg>';
+
+        var amal = [
+          { id:"puasa",   name:"Puasa",          note:"Sejak Subuh tadi",    icon:"sun",   type:"checklist", done:true  },
+          { id:"sholat",  name:"Sholat 5 waktu", note:"Isya belum — 19.19",  icon:"dome",  type:"checklist", done:false },
+          { id:"tarawih", name:"Tarawih",        note:"Di masjid / rumah",   icon:"moon",  type:"checklist", done:false },
+          { id:"witir",   name:"Witir",          note:"Penutup malam",       icon:"star",  type:"checklist", done:false },
+          { id:"tilawah", name:"Tilawah",        note:"",                    icon:"book",  type:"target", unit:"halaman" },
+          { id:"dzikir",  name:"Dzikir",         note:"Pagi & petang",       icon:"beads", type:"counter", value:33 },
+          { id:"sedekah", name:"Sedekah",        note:"",                    icon:"gift",  type:"amount", value:20000 },
+          { id:"sahur",   name:"Sahur",          note:"Pukul 03.58 tadi",    icon:"bowl",  type:"checklist", done:true  }
+        ];
+        var TYPE_DEFS = [
+          { id:"checklist", label:"Ceklist",       desc:"Centang selesai / belum" },
+          { id:"counter",   label:"Hitungan",      desc:"Angka bebas dengan tombol − / +" },
+          { id:"target",    label:"Target",        desc:"Angka dengan target dan progress bar" },
+          { id:"amount",    label:"Nominal (Rp)",  desc:"Jumlah uang dalam Rupiah" }
+        ];
+        function typeLabel(id){
+          for (var i = 0; i < TYPE_DEFS.length; i++) if (TYPE_DEFS[i].id === id) return TYPE_DEFS[i].label;
+          return "Ceklist";
+        }
+        function fmtID(n){ return Number(n || 0).toLocaleString("id-ID"); }
+        function amalValue(a){ return a.id === "tilawah" ? pagesToday : (a.value || 0); }
+        function amalTarget(a){ return a.id === "tilawah" ? targetPages : (a.target || 0); }
+        function isDone(a){
+          if (a.type === "counter" || a.type === "amount") return amalValue(a) > 0;
+          if (a.type === "target") return amalTarget(a) > 0 && amalValue(a) >= amalTarget(a);
+          return !!a.done;
+        }
+        function setAmalValue(a, v){
+          v = Math.floor(Number(v) || 0);
+          if (v < 0) v = 0;
+          if (v > 100000000) v = 100000000;
+          if (a.id === "tilawah"){ pagesToday = v; renderPages(); }
+          else a.value = v;
+        }
+        var customAmal = [];
+        var pagesToday = 8, targetPages = 20;
+        var tasbihCount = 0, tasbihTarget = 33, tasbihDhikr = "Subhanallah";
+        var tasbihSound = true, tasbihVibrate = true, audioCtx = null;
+        var DHIKR_LIST = [
+          { name:"Subhanallah", ar:"سُبْحَانَ الله" },
+          { name:"Alhamdulillah", ar:"الْحَمْدُ لِلَّه" },
+          { name:"Allahu Akbar", ar:"اللهُ أَكْبَر" },
+          { name:"La ilaha illallah", ar:"لَا إِلٰهَ إِلَّا الله" },
+          { name:"Astaghfirullah", ar:"أَسْتَغْفِرُ الله" }
+        ];
+        var TARGET_LIST = [33, 99, 100];
+
+        var toastTimer = null;
+        function toast(msg){
+          var t = $("toast"); t.textContent = msg; t.classList.add("show");
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 2300);
+        }
+
+        var slide = 0, SLIDES = 3;
+        function renderSlide(){
+          $("track").style.transform = "translateX(-" + (slide * 100) + "%)";
+          var segs = $("segments").children;
+          for (var i = 0; i < segs.length; i++) segs[i].classList.toggle("on", i <= slide);
+          $("btnNextLabel").textContent = slide === SLIDES - 1 ? "Mulai" : "Lanjut";
+          $("btnSkip").style.visibility = slide === SLIDES - 1 ? "hidden" : "visible";
+        }
+        function enterApp(){
+          $("onboarding").style.display = "none";
+          $("app").hidden = false;
+          window.scrollTo(0, 0);
+        }
+        $("btnNext").addEventListener("click", function(){
+          if (slide < SLIDES - 1){ slide++; renderSlide(); } else { enterApp(); }
+        });
+        $("btnSkip").addEventListener("click", enterApp);
+        renderSlide();
+
+        var tabs = document.querySelectorAll(".tab");
+        function go(view){
+          tabs.forEach(function(t){
+            var tv = t.getAttribute("data-view");
+            t.classList.toggle("active", tv === view || ((view === "prayer" || view === "tasbih") && tv === "beranda"));
+          });
+          document.querySelectorAll(".view").forEach(function(v){ v.classList.remove("active"); });
+          $("view-" + view).classList.add("active");
+          window.scrollTo(0, 0);
+        }
+        tabs.forEach(function(tab){
+          tab.addEventListener("click", function(){ go(tab.getAttribute("data-view")); });
+        });
+
+        document.querySelectorAll(".q-tile").forEach(function(tile){
+          tile.addEventListener("click", function(){
+            var act = tile.getAttribute("data-act");
+            if (act === "quran") { go("quran"); }
+            else if (act === "kalender") { go("kalender"); }
+            else if (act === "tasbih") { go("tasbih"); }
+          });
+        });
+        $("trackerBanner").addEventListener("click", function(){
+          var card = $("checklistCard");
+          if (card) card.scrollIntoView({ behavior:"smooth", block:"center" });
+        });
+
+        function tilawahNote(){ return pagesToday + " dari " + targetPages + " halaman"; }
+        function noteFor(a){
+          if (a.id === "tilawah") return tilawahNote();
+          if (a.type === "counter") return (a.note ? a.note + " · " : "") + fmtID(amalValue(a)) + " kali hari ini";
+          if (a.type === "amount") return amalValue(a) > 0 ? "Tercatat Rp" + fmtID(amalValue(a)) + " hari ini" : "Belum ada nominal hari ini";
+          if (a.type === "target") return fmtID(amalValue(a)) + " dari " + fmtID(amalTarget(a)) + (a.unit ? " " + a.unit : "");
+          return a.note || "";
+        }
+        function updateSummary(){
+          var doneCount = amal.filter(isDone).length;
+          $("amalCount").textContent = doneCount + " dari " + amal.length;
+          $("amalBar").style.width = Math.round(doneCount / amal.length * 100) + "%";
+        }
+        var MINUS_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>';
+        var PLUS_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+        function renderAmal(){
+          var list = $("amalList"); list.innerHTML = "";
+          amal.forEach(function(a){
+            var li = document.createElement("li");
+            var done = isDone(a);
+            if (!a.type || a.type === "checklist"){
+              var btn = document.createElement("button");
+              btn.type = "button";
+              btn.className = "amal" + (done ? " done" : "");
+              btn.setAttribute("aria-pressed", done ? "true" : "false");
+              btn.setAttribute("aria-label", a.name + (done ? ", selesai" : ", belum"));
+              btn.innerHTML =
+                '<span class="box">' + CHECK + '</span>' +
+                '<span class="amal-ic">' + ICONS[a.icon] + '</span>' +
+                '<span class="amal-tx"><span class="amal-name"></span>' +
+                '<span class="amal-note"></span></span>';
+              btn.querySelector(".amal-name").textContent = a.name;
+              btn.querySelector(".amal-note").textContent = noteFor(a);
+              btn.addEventListener("click", function(){
+                a.done = !a.done;
+                renderAmal(); renderCalendar(); renderWeek();
+              });
+              li.appendChild(btn);
+            } else {
+              var row = document.createElement("div");
+              row.className = "amal-row" + (done ? " done" : "");
+              row.innerHTML =
+                '<div class="amal-main">' +
+                  '<span class="amal-ic">' + ICONS[a.icon] + '</span>' +
+                  '<span class="amal-tx"><span class="amal-name"></span><span class="amal-note"></span></span>' +
+                  '<span class="amal-ctrl"></span>' +
+                '</div>';
+              row.querySelector(".amal-name").textContent = a.name;
+              var noteEl = row.querySelector(".amal-note");
+              noteEl.textContent = noteFor(a);
+              var ctrl = row.querySelector(".amal-ctrl");
+              var barFill = null;
+              if (a.type === "target"){
+                var prog = document.createElement("div");
+                prog.className = "bar green amal-prog";
+                prog.innerHTML = "<i></i>";
+                barFill = prog.querySelector("i");
+                barFill.style.width = Math.min(100, Math.round(amalValue(a) / Math.max(1, amalTarget(a)) * 100)) + "%";
+                row.appendChild(prog);
+              }
+              function refreshRow(){
+                noteEl.textContent = noteFor(a);
+                row.classList.toggle("done", isDone(a));
+                if (barFill) barFill.style.width = Math.min(100, Math.round(amalValue(a) / Math.max(1, amalTarget(a)) * 100)) + "%";
+                updateSummary();
+              }
+              if (a.type === "counter" || a.type === "target"){
+                var minus = document.createElement("button");
+                minus.type = "button"; minus.className = "mini-step"; minus.innerHTML = MINUS_SVG;
+                minus.setAttribute("aria-label", "Kurangi " + a.name);
+                var inp = document.createElement("input");
+                inp.type = "number"; inp.className = "num-in"; inp.min = "0"; inp.inputMode = "numeric";
+                inp.value = amalValue(a);
+                inp.setAttribute("aria-label", "Nilai " + a.name + (a.type === "target" ? " dari target " + amalTarget(a) : ""));
+                var plus = document.createElement("button");
+                plus.type = "button"; plus.className = "mini-step"; plus.innerHTML = PLUS_SVG;
+                plus.setAttribute("aria-label", "Tambah " + a.name);
+                minus.addEventListener("click", function(){
+                  setAmalValue(a, amalValue(a) - 1);
+                  renderAmal(); renderCalendar(); renderWeek();
+                });
+                plus.addEventListener("click", function(){
+                  setAmalValue(a, amalValue(a) + 1);
+                  renderAmal(); renderCalendar(); renderWeek();
+                });
+                inp.addEventListener("input", function(){
+                  setAmalValue(a, inp.value);
+                  refreshRow();
+                });
+                inp.addEventListener("change", function(){ renderAmal(); renderCalendar(); renderWeek(); });
+                ctrl.appendChild(minus); ctrl.appendChild(inp); ctrl.appendChild(plus);
+              } else if (a.type === "amount"){
+                var rp = document.createElement("span");
+                rp.className = "rp-wrap";
+                rp.innerHTML = '<span class="rp-pre">Rp</span>';
+                var ain = document.createElement("input");
+                ain.type = "text"; ain.inputMode = "numeric"; ain.className = "num-in wide";
+                ain.placeholder = "0";
+                ain.value = a.value ? fmtID(a.value) : "";
+                ain.setAttribute("aria-label", "Nominal " + a.name + " dalam Rupiah");
+                ain.addEventListener("input", function(){
+                  var digits = ain.value.replace(/[^\d]/g, "");
+                  a.value = digits ? parseInt(digits, 10) : 0;
+                  ain.value = a.value ? fmtID(a.value) : "";
+                  refreshRow();
+                });
+                ain.addEventListener("change", function(){ renderCalendar(); renderWeek(); });
+                rp.appendChild(ain);
+                ctrl.appendChild(rp);
+              }
+              li.appendChild(row);
+            }
+            list.appendChild(li);
+          });
+          updateSummary();
+        }
+        function todayPct(){
+          var d = amal.filter(isDone).length;
+          return Math.round(d / amal.length * 100);
+        }
+
+        function renderPages(){
+          $("pagesNow").textContent = pagesToday;
+          $("pagesTarget").textContent = targetPages;
+          $("pagesBar").style.width = Math.min(100, Math.round(pagesToday / targetPages * 100)) + "%";
+          $("targetVal").textContent = targetPages;
+        }
+        $("pagesMinus").addEventListener("click", function(){
+          if (pagesToday > 0){ pagesToday--; renderPages(); renderAmal(); }
+        });
+        $("pagesPlus").addEventListener("click", function(){
+          if (pagesToday < targetPages){ pagesToday++; renderPages(); renderAmal(); }
+        });
+        $("targetMinus").addEventListener("click", function(){
+          if (targetPages > 1){ targetPages--; renderPages(); renderAmal(); toast("Target tilawah: " + targetPages + " halaman/hari"); }
+        });
+        $("targetPlus").addEventListener("click", function(){
+          if (targetPages < 100){ targetPages++; renderPages(); renderAmal(); toast("Target tilawah: " + targetPages + " halaman/hari"); }
+        });
+
+        var QURAN_DATA = {
+          surah: [
+            { n:"Al-Fatihah", d:"7 Ayat · Pembukaan", ar:"الفاتحة" },
+            { n:"Al-Baqarah", d:"286 Ayat", ar:"البقرة" },
+            { n:"Ali 'Imran", d:"200 Ayat", ar:"آل عمران" },
+            { n:"An-Nisa", d:"176 Ayat", ar:"النساء" },
+            { n:"Al-Ma'idah", d:"120 Ayat", ar:"المائدة" },
+            { n:"Al-Mulk", d:"30 Ayat · dibaca malam ini", ar:"الملك" }
+          ],
+          juz: [
+            { n:"Juz 1", d:"Al-Fatihah — Al-Baqarah 141", ar:"الأول" },
+            { n:"Juz 2", d:"Al-Baqarah 142 — 252", ar:"الثاني" },
+            { n:"Juz 12", d:"Hud — Yusuf 52 · posisi kamu", ar:"الثاني عشر" },
+            { n:"Juz 30", d:"An-Naba — An-Nas", ar:"الثلاثون" }
+          ],
+          halaman: [
+            { n:"Halaman 1", d:"Al-Fatihah", ar:"١" },
+            { n:"Halaman 231", d:"Al-Mulk · posisi kamu", ar:"٢٣١" },
+            { n:"Halaman 604", d:"An-Nas · halaman terakhir", ar:"٦٠٤" }
+          ]
+        };
+        function renderQuran(mode){
+          var list = $("quranList"); list.innerHTML = "";
+          QURAN_DATA[mode].forEach(function(r, i){
+            var li = document.createElement("li");
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "q-row";
+            btn.innerHTML =
+              '<span class="q-num">' + (i + 1) + '</span>' +
+              '<span class="q-tx"><span class="q-name"></span><span class="q-note"></span></span>' +
+              '<span class="q-ar"></span>';
+            btn.querySelector(".q-name").textContent = r.n;
+            btn.querySelector(".q-note").textContent = r.d;
+            btn.querySelector(".q-ar").textContent = r.ar;
+            btn.addEventListener("click", function(){
+              if (mode === "surah"){
+                $("lrTitle").textContent = r.n;
+                $("lrSub").textContent = "Ayat ke-1";
+                toast("Terakhir dibaca: " + r.n + ", ayat ke-1 (contoh)");
+              } else {
+                toast("Membuka " + r.n + " (contoh)");
+              }
+            });
+            li.appendChild(btn);
+            list.appendChild(li);
+          });
+        }
+        document.querySelectorAll(".seg button").forEach(function(b){
+          b.addEventListener("click", function(){
+            document.querySelectorAll(".seg button").forEach(function(x){ x.classList.remove("on"); });
+            b.classList.add("on");
+            renderQuran(b.getAttribute("data-seg"));
+          });
+        });
+
+        var PRAYERS = [
+          { name:"Subuh",   time:"04.38", end:"05.52", sound:true  },
+          { name:"Dzuhur",  time:"12.09", end:"15.31", sound:false },
+          { name:"Ashar",   time:"15.31", end:"18.07", sound:false },
+          { name:"Maghrib", time:"18.07", end:"19.19", sound:true,  label:"Maghrib (Buka Puasa)" },
+          { name:"Isya",    time:"19.19", end:"04.38", sound:false }
+        ];
+        var SPK_ON  = '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5L11 19V5Z"/><path d="M15 9.5a4 4 0 0 1 0 5"/><path d="M17.6 7a7.6 7.6 0 0 1 0 10"/></svg>';
+        var SPK_OFF = '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5L11 19V5Z"/><path d="m16 9.5 5 5M21 9.5l-5 5"/></svg>';
+        function prayerDate(p, addDays){
+          var parts = p.time.split(".");
+          var d = new Date();
+          d.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+          if (addDays) d.setDate(d.getDate() + addDays);
+          return d;
+        }
+        function nextPrayer(){
+          var now = new Date();
+          for (var i = 0; i < PRAYERS.length; i++){
+            if (prayerDate(PRAYERS[i], 0) > now) return { idx:i, when:prayerDate(PRAYERS[i], 0) };
+          }
+          return { idx:0, when:prayerDate(PRAYERS[0], 1) };
+        }
+        function gaugeFrac(){
+          var now = new Date();
+          var next = nextPrayer();
+          var prevIdx = (next.idx + PRAYERS.length - 1) % PRAYERS.length;
+          var prev = prayerDate(PRAYERS[prevIdx], next.idx === 0 ? -1 : 0);
+          var frac = (now - prev) / (next.when - prev);
+          if (frac < 0) frac = 0; if (frac > 1) frac = 1;
+          return frac;
+        }
+        function renderPrayerRow(nextIdx){
+          var row = $("prayerRow"); row.innerHTML = "";
+          var now = new Date();
+          PRAYERS.forEach(function(p, i){
+            var chip = document.createElement("button");
+            chip.type = "button";
+            var cls = "p-chip";
+            if (i === nextIdx) cls += " next";
+            else if (prayerDate(p, 0) <= now) cls += " done";
+            chip.className = cls;
+            chip.setAttribute("aria-label", p.name + " pukul " + p.time + " — ketuk untuk detail Prayer Time");
+            chip.innerHTML = '<span class="ic">' + PRAYER_ICONS[i] + "</span>" + p.name + "<b>" + p.time + "</b>";
+            chip.addEventListener("click", function(){ go("prayer"); });
+            row.appendChild(chip);
+          });
+        }
+
+        function renderPtList(){
+          var list = $("ptList"); list.innerHTML = "";
+          PRAYERS.forEach(function(p, i){
+            var li = document.createElement("li");
+            li.className = "pt-item";
+            li.setAttribute("data-pt", i);
+            li.innerHTML =
+              '<span class="pt-dot" aria-hidden="true"></span>' +
+              '<div class="pt-card">' +
+                '<span class="pt-ic">' + PRAYER_ICONS[i] + '</span>' +
+                '<span class="pt-tx"><span class="pt-name"></span>' +
+                '<span class="pt-range">' + p.time + " – " + p.end + '</span></span>' +
+                '<span class="pt-status st-up">Mendatang</span>' +
+              '</div>';
+            li.querySelector(".pt-name").textContent = p.label || p.name;
+            var spk = document.createElement("button");
+            spk.type = "button";
+            spk.className = "pt-spk" + (p.sound ? " on" : "");
+            spk.setAttribute("aria-pressed", p.sound ? "true" : "false");
+            spk.setAttribute("aria-label", "Suara adzan " + p.name + (p.sound ? " aktif" : " mati"));
+            spk.innerHTML = p.sound ? SPK_ON : SPK_OFF;
+            spk.addEventListener("click", function(){
+              p.sound = !p.sound;
+              spk.className = "pt-spk" + (p.sound ? " on" : "");
+              spk.setAttribute("aria-pressed", p.sound ? "true" : "false");
+              spk.setAttribute("aria-label", "Suara adzan " + p.name + (p.sound ? " aktif" : " mati"));
+              spk.innerHTML = p.sound ? SPK_ON : SPK_OFF;
+              toast("Adzan " + p.name + (p.sound ? " dinyalakan" : " dimatikan") + " (contoh)");
+            });
+            li.querySelector(".pt-card").appendChild(spk);
+            list.appendChild(li);
+          });
+        }
+        function updatePt(nextIdx, cdText){
+          var now = new Date();
+          function pad(n){ return (n < 10 ? "0" : "") + n; }
+          $("ptClock").textContent = pad(now.getHours()) + ":" + pad(now.getMinutes());
+          $("ptSec").textContent = ":" + pad(now.getSeconds());
+          $("ptNext").textContent = "Menuju " + PRAYERS[nextIdx].name + " · " + cdText + " lagi";
+          $("ptArc").setAttribute("stroke-dasharray", Math.round(gaugeFrac() * 383) + " 400");
+          document.querySelectorAll(".pt-item").forEach(function(li){
+            var i = parseInt(li.getAttribute("data-pt"), 10);
+            li.classList.toggle("next", i === nextIdx);
+            var pill = li.querySelector(".pt-status");
+            if (pill){
+              var cls, txt;
+              if (i === nextIdx){ cls = "st-next"; txt = "Berikutnya"; }
+              else if (prayerDate(PRAYERS[i], 0) <= now){ cls = "st-done"; txt = "Selesai"; }
+              else { cls = "st-up"; txt = "Mendatang"; }
+              pill.className = "pt-status " + cls;
+              pill.textContent = txt;
+            }
+          });
+        }
+        $("heroPrayer").addEventListener("click", function(){ go("prayer"); });
+        $("heroPrayer").addEventListener("keydown", function(e){
+          if (e.key === "Enter" || e.key === " "){ e.preventDefault(); go("prayer"); }
+        });
+        $("ptBack").addEventListener("click", function(){ go("beranda"); });
+        function tickCountdown(){
+          var np = nextPrayer();
+          var diff = Math.max(0, Math.floor((np.when - new Date()) / 1000));
+          var h = Math.floor(diff / 3600), m = Math.floor(diff % 3600 / 60), s = diff % 60;
+          function pad(n){ return (n < 10 ? "0" : "") + n; }
+          var cd = h + ":" + pad(m) + ":" + pad(s);
+          $("cdFull").textContent = cd;
+          $("nextName").textContent = PRAYERS[np.idx].name;
+          $("nextTime").textContent = PRAYERS[np.idx].time.replace(".", ":");
+          var now = new Date();
+          $("weatherTime").textContent = pad(now.getHours()) + ":" + pad(now.getMinutes());
+          $("heroArc").setAttribute("stroke-dasharray", Math.round(gaugeFrac() * 383) + " 400");
+          renderPrayerRow(np.idx);
+          updatePt(np.idx, cd);
+        }
+        tickCountdown();
+        setInterval(tickCountdown, 1000);
+
+        var CAL = [100, 88, 100, 75, 100, 88, 100, 63, 100, 88, 100];
+        var MONTHS = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+        var DAYS_ID = ["Ahad","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+        var calSelected = 12;
+        function dayDate(day){ return new Date(2027, 1, 7 + day); }
+        function dayPct(day){
+          if (day === 12) return todayPct();
+          if (day <= CAL.length) return CAL[day - 1];
+          return null;
+        }
+        function missedFor(day, pct){
+          var count = Math.round(pct / 100 * amal.length);
+          var missed = [], start = day % amal.length, need = amal.length - count, k = 0;
+          while (missed.length < need && k < amal.length * 2){
+            var idx = (start + k) % amal.length;
+            if (missed.indexOf(idx) === -1) missed.push(idx);
+            k++;
+          }
+          return missed;
+        }
+        function renderCalendar(){
+          var grid = $("calGrid"); grid.innerHTML = "";
+          for (var d = 1; d <= 30; d++){
+            (function(day){
+              var pct = dayPct(day);
+              var btn = document.createElement("button");
+              btn.type = "button";
+              var cls = "cal-day";
+              var ind = "";
+              if (day === 12) cls += " today";
+              if (pct === null) cls += " future";
+              else if (pct >= 100){ cls += " full"; ind = CHECK_SM; }
+              else if (pct > 0){ ind = '<span class="dot"></span>'; }
+              if (day === calSelected) cls += " sel";
+              btn.className = cls;
+              btn.setAttribute("aria-label", "Ramadan hari ke-" + day + (pct === null ? ", belum dimulai" : ", " + pct + " persen"));
+              btn.innerHTML = "<span>" + day + '</span><span class="ind">' + ind + "</span>";
+              btn.addEventListener("click", function(){ calSelected = day; renderCalendar(); });
+              grid.appendChild(btn);
+            })(d);
+          }
+          for (var b = 0; b < 5; b++){
+            var blank = document.createElement("div");
+            blank.className = "cal-blank";
+            grid.appendChild(blank);
+          }
+          renderDayDetail();
+        }
+        function renderDayDetail(){
+          var day = calSelected, pct = dayPct(day), dt = dayDate(day);
+          var head = "Hari ke-" + day + " · " + DAYS_ID[dt.getDay()] + ", " + dt.getDate() + " " + MONTHS[dt.getMonth()] + " " + dt.getFullYear();
+          var box = $("dayDetail");
+          if (pct === null){
+            box.innerHTML = "<h3>" + head + "</h3>" +
+              '<div class="empty">' + STAR_MARK + "Belum dimulai. Hari ini masih Ramadan ke-12 — selesaikan dulu hari ini, besok menyusul.</div>";
+            return;
+          }
+          var doneCount, missed;
+          if (day === 12){
+            doneCount = amal.filter(isDone).length;
+            missed = [];
+            amal.forEach(function(a, i){ if (!isDone(a)) missed.push(i); });
+          } else {
+            doneCount = Math.round(pct / 100 * amal.length);
+            missed = missedFor(day, pct);
+          }
+          var items = amal.map(function(a, i){
+            var yes = missed.indexOf(i) === -1;
+            return '<li class="' + (yes ? "yes" : "no") + '">' + (yes ? CHECK_SM : "") + "<span></span></li>";
+          });
+          box.innerHTML = "<h3>" + head + "</h3>" +
+            '<p class="sub" style="margin-top:4px;">' + doneCount + " dari " + amal.length + " amal tercatat" + (day === 12 ? " · hari ini, masih bisa dilengkapi" : "") + "</p>" +
+            '<ul class="amal-mini">' + items.join("") + "</ul>";
+          var lis = box.querySelectorAll(".amal-mini li span");
+          amal.forEach(function(a, i){ lis[i].textContent = a.name; });
+        }
+
+        var WEEK = [
+          { dow:"Sab", pct:88 }, { dow:"Ahd", pct:100 }, { dow:"Sen", pct:63 },
+          { dow:"Sel", pct:100 }, { dow:"Rab", pct:88 }, { dow:"Kam", pct:100 }
+        ];
+        function renderWeek(){
+          var chart = $("weekChart"); chart.innerHTML = "";
+          var all = WEEK.concat([{ dow:"Jum", pct:todayPct(), today:true }]);
+          all.forEach(function(w){
+            var col = document.createElement("div");
+            col.className = "col" + (w.today ? " today" : "");
+            col.innerHTML = '<span class="pct">' + w.pct + '%</span>' +
+              '<div class="track"><div class="fill" style="height:' + Math.max(4, w.pct) + '%"></div></div>' +
+              '<span class="dow">' + w.dow + "</span>";
+            chart.appendChild(col);
+          });
+          var sum = all.reduce(function(a, w){ return a + w.pct; }, 0);
+          $("sumAvg").textContent = Math.round(sum / all.length) + "%";
+        }
+        var PERAMAL = [
+          ["Puasa", 7], ["Sholat 5 waktu", 7], ["Tarawih", 6], ["Witir", 5],
+          ["Tilawah", 6], ["Dzikir", 6], ["Sedekah", 4], ["Sahur", 7]
+        ];
+        (function renderPerAmal(){
+          var wrap = $("perAmal");
+          PERAMAL.forEach(function(r){
+            var row = document.createElement("div");
+            row.className = "row";
+            row.innerHTML = '<span class="nm"></span><div class="bar green"><i style="width:' + Math.round(r[1] / 7 * 100) + '%"></i></div><span class="vl">' + r[1] + "/7</span>";
+            row.querySelector(".nm").textContent = r[0];
+            wrap.appendChild(row);
+          });
+        })();
+
+        $("citySelect").addEventListener("change", function(){
+          $("prayerCity").textContent = this.value;
+          $("prayerCity2").textContent = this.value;
+          $("ptLoc").textContent = this.value;
+          toast("Kota diubah ke " + this.value + " — jadwal contoh tetap sama di prototipe ini");
+        });
+        function renderCustom(){
+          var wrap = $("customWrap"); wrap.innerHTML = "";
+          if (!customAmal.length){
+            wrap.innerHTML = '<div class="empty">' + STAR_MARK + "Belum ada amal tambahan. Tambahkan amal versimu sendiri di bawah — misalnya Sholat Dhuha atau membaca buku sirah.</div>";
+            return;
+          }
+          var ul = document.createElement("ul");
+          ul.className = "custom-list";
+          customAmal.forEach(function(name){
+            var li = document.createElement("li");
+            var span = document.createElement("span"); span.textContent = name;
+            var item = amal.filter(function(a){ return a.name === name; })[0];
+            var badge = document.createElement("span");
+            badge.className = "custom-type";
+            badge.textContent = item ? typeLabel(item.type) : "Ceklist";
+            var del = document.createElement("button");
+            del.type = "button"; del.className = "del";
+            del.setAttribute("aria-label", "Hapus " + name);
+            del.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+            del.addEventListener("click", function(){
+              customAmal = customAmal.filter(function(n){ return n !== name; });
+              amal = amal.filter(function(a){ return a.name !== name; });
+              renderCustom(); renderAmal(); renderCalendar(); renderWeek();
+              toast("“" + name + "” dihapus dari checklist");
+            });
+            li.appendChild(span); li.appendChild(badge); li.appendChild(del);
+            ul.appendChild(li);
+          });
+          wrap.appendChild(ul);
+        }
+        var pendingType = "checklist";
+        function renderTypeOpts(){
+          var wrap = $("typeOpts"); wrap.innerHTML = "";
+          TYPE_DEFS.forEach(function(t){
+            var b = document.createElement("button");
+            b.type = "button";
+            b.className = "sheet-opt" + (t.id === pendingType ? " sel" : "");
+            b.innerHTML = '<span class="opt-tx"><span class="opt-name"></span><span class="desc"></span></span><span class="check">' + TSB_CHECK + "</span>";
+            b.querySelector(".opt-name").textContent = t.label;
+            b.querySelector(".desc").textContent = t.desc;
+            b.addEventListener("click", function(){
+              pendingType = t.id;
+              $("typePickVal").textContent = t.label;
+              $("addTargetRow").hidden = t.id !== "target";
+              closeSheets();
+            });
+            wrap.appendChild(b);
+          });
+        }
+        $("typePickBtn").addEventListener("click", function(){
+          renderTypeOpts();
+          openSheet($("typeSheet"));
+        });
+        $("addForm").addEventListener("submit", function(e){
+          e.preventDefault();
+          var name = $("addInput").value.trim();
+          if (!name) return;
+          if (amal.some(function(a){ return a.name.toLowerCase() === name.toLowerCase(); })){
+            toast("Amal itu sudah ada di checklist");
+            return;
+          }
+          var item = { id:"custom-" + Date.now(), name:name, note:"Amal tambahan saya", icon:"star", type:pendingType };
+          if (pendingType === "checklist"){ item.done = false; }
+          else if (pendingType === "target"){
+            var tv = parseInt($("addTargetInput").value, 10);
+            item.value = 0;
+            item.target = tv > 0 ? tv : 10;
+          }
+          else { item.value = 0; }
+          customAmal.push(name);
+          amal.push(item);
+          $("addInput").value = "";
+          $("addTargetInput").value = "";
+          renderCustom(); renderAmal(); renderCalendar(); renderWeek();
+          toast("“" + name + "” ditambahkan · tipe " + typeLabel(pendingType));
+        });
+
+        /* ---------- Tasbih page ---------- */
+        var TSB_CIRC = 867;
+        var TSB_SPK_ON  = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5L11 19V5Z"/><path d="M15 9.5a4 4 0 0 1 0 5"/><path d="M17.6 7a7.6 7.6 0 0 1 0 10"/></svg>';
+        var TSB_SPK_OFF = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5L11 19V5Z"/><path d="m16 9.5 5 5M21 9.5l-5 5"/></svg>';
+        var TSB_CHECK = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5 10 18 19.5 6.5"/></svg>';
+
+        function playClick(){
+          try {
+            var AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return;
+            if (!audioCtx) audioCtx = new AC();
+            if (audioCtx.state === "suspended") audioCtx.resume();
+            var t = audioCtx.currentTime;
+            var osc = audioCtx.createOscillator();
+            var gain = audioCtx.createGain();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(1250, t);
+            gain.gain.setValueAtTime(0.12, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(t); osc.stop(t + 0.07);
+          } catch (e) { /* audio tidak tersedia — abaikan */ }
+        }
+        function buzz(ms){
+          try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* tidak didukung */ }
+        }
+        function renderTasbih(){
+          var done = tasbihCount >= tasbihTarget;
+          $("tsbCount").textContent = tasbihCount;
+          $("tsbTarget").textContent = "/ " + tasbihTarget;
+          $("tsbDhikrName").textContent = tasbihDhikr;
+          $("tsbRing").setAttribute("stroke-dashoffset", Math.round(TSB_CIRC * (1 - tasbihCount / tasbihTarget)));
+          $("tsbCircle").classList.toggle("done", done);
+          $("tsbCircle").setAttribute("aria-label",
+            "Tasbih " + tasbihDhikr + ": " + tasbihCount + " dari " + tasbihTarget +
+            (done ? ". Target tercapai." : ". Ketuk untuk menambah hitungan."));
+          $("tsbDone").hidden = !done;
+          $("tsbHint").style.visibility = done ? "hidden" : "visible";
+          var sb = $("tsbSoundBtn");
+          sb.classList.toggle("on", tasbihSound);
+          sb.setAttribute("aria-pressed", tasbihSound ? "true" : "false");
+          $("tsbSoundIc").innerHTML = tasbihSound ? TSB_SPK_ON : TSB_SPK_OFF;
+          $("tsbSoundLbl").textContent = "Suara: " + (tasbihSound ? "On" : "Off");
+          var vb = $("tsbVibBtn");
+          vb.classList.toggle("on", tasbihVibrate);
+          vb.setAttribute("aria-pressed", tasbihVibrate ? "true" : "false");
+          $("tsbVibLbl").textContent = "Getar: " + (tasbihVibrate ? "On" : "Off");
+          renderDhikrOpts(); renderTargetOpts();
+        }
+        $("tsbCircle").addEventListener("click", function(){
+          if (tasbihCount >= tasbihTarget) return;
+          tasbihCount++;
+          if (tasbihSound) playClick();
+          if (tasbihCount >= tasbihTarget) { if (tasbihVibrate) buzz([30, 40, 30]); }
+          else if (tasbihVibrate) buzz(15);
+          renderTasbih();
+        });
+        $("tsbMinusBtn").addEventListener("click", function(){
+          if (tasbihCount > 0){ tasbihCount--; renderTasbih(); }
+        });
+        $("tsbResetBtn").addEventListener("click", function(){
+          if (tasbihCount === 0) return;
+          tasbihCount = 0; renderTasbih();
+          toast("Hitungan tasbih diulang dari 0");
+        });
+        $("tsbSoundBtn").addEventListener("click", function(){
+          tasbihSound = !tasbihSound; renderTasbih();
+          if (tasbihSound) playClick();
+        });
+        $("tsbVibBtn").addEventListener("click", function(){
+          tasbihVibrate = !tasbihVibrate; renderTasbih();
+          if (tasbihVibrate) buzz(20);
+        });
+        $("tsbBack").addEventListener("click", function(){ go("beranda"); });
+
+        /* Pickers (bottom sheets) */
+        var openSheetEl = null;
+        function openSheet(el){
+          closeSheets();
+          el.hidden = false;
+          openSheetEl = el;
+          requestAnimationFrame(function(){
+            requestAnimationFrame(function(){
+              el.classList.add("show");
+              $("sheetOverlay").classList.add("show");
+            });
+          });
+        }
+        function closeSheets(){
+          document.querySelectorAll(".sheet").forEach(function(s){
+            s.classList.remove("show"); s.hidden = true;
+          });
+          $("sheetOverlay").classList.remove("show");
+          openSheetEl = null;
+        }
+        $("sheetOverlay").addEventListener("click", closeSheets);
+        document.querySelectorAll("[data-close-sheet]").forEach(function(b){
+          b.addEventListener("click", closeSheets);
+        });
+        document.addEventListener("keydown", function(e){
+          if (e.key === "Escape" && openSheetEl) closeSheets();
+        });
+        function renderDhikrOpts(){
+          var wrap = $("dhikrOpts"); wrap.innerHTML = "";
+          DHIKR_LIST.forEach(function(d){
+            var b = document.createElement("button");
+            b.type = "button";
+            b.className = "sheet-opt" + (d.name === tasbihDhikr ? " sel" : "");
+            b.innerHTML = '<span></span><span class="ar"></span><span class="check">' + TSB_CHECK + "</span>";
+            b.querySelector("span").textContent = d.name;
+            b.querySelector(".ar").textContent = d.ar;
+            b.addEventListener("click", function(){
+              tasbihDhikr = d.name; tasbihCount = 0;
+              closeSheets(); renderTasbih();
+              toast("Dzikir: " + d.name + " · target " + tasbihTarget + "×");
+            });
+            wrap.appendChild(b);
+          });
+        }
+        function renderTargetOpts(){
+          var wrap = $("targetOpts"); wrap.innerHTML = "";
+          TARGET_LIST.forEach(function(t){
+            var b = document.createElement("button");
+            b.type = "button";
+            b.className = "sheet-opt" + (t === tasbihTarget ? " sel" : "");
+            b.innerHTML = "<span>" + t + ' kali</span><span class="check">' + TSB_CHECK + "</span>";
+            b.addEventListener("click", function(){
+              tasbihTarget = t; tasbihCount = 0;
+              closeSheets(); renderTasbih();
+              toast("Target tasbih: " + t + "×");
+            });
+            wrap.appendChild(b);
+          });
+        }
+        $("tsbListBtn").addEventListener("click", function(){ openSheet($("dhikrSheet")); });
+        $("tsbEditBtn").addEventListener("click", function(){ openSheet($("targetSheet")); });
+
+        renderPtList();
+        renderPages();
+        renderAmal();
+        renderTasbih();
+        renderQuran("surah");
+        renderCalendar();
+        renderWeek();
+        renderCustom();
+        renderTypeOpts();
+      })();
+    </script>
+  </body>
+</html>
