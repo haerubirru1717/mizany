@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { MosqueSkyline } from './MosqueSkyline'
 import { HijriHeroData } from '../services/hijriService'
 import { MapPin, Bell, Clock, ChevronRight, RotateCw, CalendarDays } from 'lucide-react'
+
+const ARC_LENGTH = 383.27 // Exact semicircle length for r=122 (Math.PI * 122)
 
 interface HeroPrayerProps {
   city: string
   gregorianDate?: string
   currentTime?: string
+  tzLabel?: 'WIB' | 'WITA' | 'WIT'
   arcProgress?: number
   nextPrayerName?: string
   nextPrayerTime?: string
@@ -20,6 +23,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
   city,
   gregorianDate,
   currentTime,
+  tzLabel,
   arcProgress,
   nextPrayerName,
   nextPrayerTime,
@@ -29,29 +33,47 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
   onOpenCalendar,
 }) => {
   const hasRealProgress = typeof arcProgress === 'number'
-  const targetOffset = hasRealProgress ? Math.round(384 * (1 - arcProgress)) : 384
-  const [animatedOffset, setAnimatedOffset] = useState(384)
+  const clampedProgress = hasRealProgress ? Math.max(0, Math.min(1, arcProgress)) : 0
+  const targetOffset = hasRealProgress
+    ? Number((ARC_LENGTH * (1 - clampedProgress)).toFixed(2))
+    : ARC_LENGTH
+  const [animatedOffset, setAnimatedOffset] = useState(ARC_LENGTH)
   const [isSettled, setIsSettled] = useState(false)
   const [isFlipped, setIsFlipped] = useState(false)
+  const latestTargetOffsetRef = useRef(targetOffset)
+  latestTargetOffsetRef.current = targetOffset
 
+  // One-shot initial entrance sweep & settle timer (React StrictMode-safe, never cancelled by 1s ticks)
   useEffect(() => {
     if (!hasRealProgress) return
+
     const startTimer = setTimeout(() => {
-      setAnimatedOffset(targetOffset)
-    }, 120)
+      setAnimatedOffset(latestTargetOffsetRef.current)
+    }, 80)
+    const settleTimer = setTimeout(() => {
+      setIsSettled(true)
+    }, 1480)
 
-    if (!isSettled) {
-      const settleTimer = setTimeout(() => {
-        setIsSettled(true)
-      }, 1520)
-      return () => {
-        clearTimeout(startTimer)
-        clearTimeout(settleTimer)
-      }
+    return () => {
+      clearTimeout(startTimer)
+      clearTimeout(settleTimer)
     }
+  }, [hasRealProgress])
 
-    return () => clearTimeout(startTimer)
-  }, [hasRealProgress, targetOffset, isSettled])
+  // Continuous live tracking after initial sweep completes
+  useEffect(() => {
+    if (!hasRealProgress || !isSettled) return
+    setAnimatedOffset(targetOffset)
+  }, [hasRealProgress, isSettled, targetOffset])
+
+  const echoMid = Number(Math.max(0, animatedOffset - 3).toFixed(2))
+  const echoEnd = Number(Math.max(0, animatedOffset - 22).toFixed(2))
+  const showActiveStroke = hasRealProgress && clampedProgress >= 0.002
+  const showWave = isSettled && clampedProgress >= 0.015
+  const showTipEcho = isSettled && clampedProgress >= 0.015 && animatedOffset >= 1
+  const arcTransitionClass = isSettled
+    ? 'transition-[stroke-dashoffset] duration-700 ease-out'
+    : 'transition-[stroke-dashoffset] duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]'
 
   const fallbackTodayGreg = new Date().toLocaleDateString('id-ID', {
     day: 'numeric',
@@ -123,7 +145,13 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
               viewBox="0 0 300 168"
               className="w-full h-auto drop-shadow-sm"
               fill="none"
-              style={{ '--arc-offset': targetOffset } as React.CSSProperties}
+              style={
+                {
+                  '--arc-offset': animatedOffset,
+                  '--arc-echo-mid': echoMid,
+                  '--arc-echo-end': echoEnd,
+                } as React.CSSProperties
+              }
             >
               <defs>
                 <linearGradient id="heroGrad" x1="0" y1="1" x2="1" y2="0">
@@ -137,9 +165,9 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
                     stroke="#FFFFFF"
                     strokeWidth="17"
                     strokeLinecap="round"
-                    strokeDasharray="384"
+                    strokeDasharray={ARC_LENGTH}
                     strokeDashoffset={animatedOffset}
-                    className="transition-[stroke-dashoffset] duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+                    className={arcTransitionClass}
                   />
                 </mask>
               </defs>
@@ -151,35 +179,37 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
                 strokeLinecap="round"
               />
               {/* One-way forward-dissolving echo behind tip — pushes forward into white track and fades out */}
-              {isSettled && (
+              {showTipEcho && (
                 <path
                   d="M28 156 A122 122 0 0 1 272 156"
                   stroke="url(#heroGrad)"
                   strokeWidth="17"
                   strokeLinecap="round"
-                  strokeDasharray="384"
+                  strokeDasharray={ARC_LENGTH}
                   className="arc-tip-echo"
                 />
               )}
               {/* Stationary active progress track synced to real elapsed time */}
-              <path
-                d="M28 156 A122 122 0 0 1 272 156"
-                stroke="url(#heroGrad)"
-                strokeWidth="17"
-                strokeLinecap="round"
-                strokeDasharray="384"
-                strokeDashoffset={animatedOffset}
-                className="transition-[stroke-dashoffset] duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
-              />
+              {showActiveStroke && (
+                <path
+                  d="M28 156 A122 122 0 0 1 272 156"
+                  stroke="url(#heroGrad)"
+                  strokeWidth="17"
+                  strokeLinecap="round"
+                  strokeDasharray={ARC_LENGTH}
+                  strokeDashoffset={animatedOffset}
+                  className={arcTransitionClass}
+                />
+              )}
               {/* Synchronized wipe: translucent wash leads, exact heroGrad color sweeps right behind */}
-              {isSettled && (
+              {showWave && (
                 <g mask="url(#arcFillMask)">
                   <path
                     d="M28 156 A122 122 0 0 1 272 156"
                     stroke="rgba(255, 255, 255, 0.34)"
                     strokeWidth="17"
                     strokeLinecap="round"
-                    strokeDasharray="384"
+                    strokeDasharray={ARC_LENGTH}
                     className="arc-wave-transparent"
                   />
                   <path
@@ -187,7 +217,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
                     stroke="url(#heroGrad)"
                     strokeWidth="17.6"
                     strokeLinecap="round"
-                    strokeDasharray="384"
+                    strokeDasharray={ARC_LENGTH}
                     className="arc-wave-color"
                   />
                 </g>
@@ -212,7 +242,10 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
           <div className="relative z-10 mt-4 pt-3 border-t border-white/15 flex items-center justify-between text-xs text-white/85">
             <div className="flex items-center gap-1.5">
               <Clock size={15} className="text-[#8BA0F3]" />
-              <span className="font-semibold">{displayCurrentTime}</span>
+              <span className="font-semibold">
+                {displayCurrentTime}
+                {tzLabel ? ` ${tzLabel}` : ''}
+              </span>
               <span className="text-white/40">•</span>
               <span>Kemenag RI</span>
             </div>

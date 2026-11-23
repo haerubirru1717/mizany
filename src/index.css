@@ -79,79 +79,79 @@ body {
 /* Synchronized dual-wipe inside filled arc: translucent wash leads, exact base color sweeps right behind */
 @keyframes arcWipeTransparent {
   0% {
-    stroke-dashoffset: 384;
+    stroke-dashoffset: 383.27;
     opacity: 1;
   }
   42% {
-    stroke-dashoffset: 0;
+    stroke-dashoffset: var(--arc-offset);
     opacity: 1;
   }
   56% {
-    stroke-dashoffset: 0;
+    stroke-dashoffset: var(--arc-offset);
     opacity: 1;
   }
   58% {
-    stroke-dashoffset: 0;
+    stroke-dashoffset: var(--arc-offset);
     opacity: 0;
   }
   100% {
-    stroke-dashoffset: 384;
+    stroke-dashoffset: 383.27;
     opacity: 0;
   }
 }
 
 @keyframes arcWipeColor {
   0% {
-    stroke-dashoffset: 384;
+    stroke-dashoffset: 383.27;
     opacity: 1;
   }
   10% {
-    stroke-dashoffset: 384;
+    stroke-dashoffset: 383.27;
     opacity: 1;
   }
   54% {
-    stroke-dashoffset: 0;
+    stroke-dashoffset: var(--arc-offset);
     opacity: 1;
   }
   60% {
-    stroke-dashoffset: 0;
+    stroke-dashoffset: var(--arc-offset);
     opacity: 1;
   }
   62% {
-    stroke-dashoffset: 0;
+    stroke-dashoffset: var(--arc-offset);
     opacity: 0;
   }
   100% {
-    stroke-dashoffset: 384;
+    stroke-dashoffset: 383.27;
     opacity: 0;
   }
 }
 
 .arc-wave-transparent {
-  stroke-dashoffset: 384;
+  stroke-dashoffset: 383.27;
   animation: arcWipeTransparent 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .arc-wave-color {
-  stroke-dashoffset: 384;
+  stroke-dashoffset: 383.27;
   animation: arcWipeColor 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-/* One-way forward-dissolving echo at the active progress tip (never retracts) */
+/* One-way forward-dissolving echo at the active progress tip (never retracts or overshoots 100%) */
 @keyframes arcTipForwardEcho {
-  0%, 24% {
+  0%, 36% {
     stroke-dashoffset: var(--arc-offset);
     opacity: 0;
   }
-  30% {
-    stroke-dashoffset: calc(var(--arc-offset) - 3);
+  42% {
+    stroke-dashoffset: var(--arc-echo-mid);
     opacity: 0.48;
   }
-  64% {
-    stroke-dashoffset: calc(var(--arc-offset) - 22);
+  74% {
+    stroke-dashoffset: var(--arc-echo-end);
     opacity: 0;
   }
-  65%, 100% {
+  75%, 100% {
     stroke-dashoffset: var(--arc-offset);
     opacity: 0;
   }

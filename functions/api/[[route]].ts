@@ -30,9 +30,20 @@ function pickBestIndonesianCity(items: Array<{ id: string; lokasi: string }>, qu
   )
 }
 
-function getJakartaDateParts() {
+function resolveIndonesianTimezone(daerah?: string): { timeZone: string; tzLabel: 'WIB' | 'WITA' | 'WIT' } {
+  const p = String(daerah || '').toUpperCase()
+  if (/PAPUA|MALUKU/.test(p)) {
+    return { timeZone: 'Asia/Jayapura', tzLabel: 'WIT' }
+  }
+  if (/BALI|NUSA TENGGARA|SULAWESI|GORONTALO|KALIMANTAN SELATAN|KALIMANTAN TIMUR|KALIMANTAN UTARA/.test(p)) {
+    return { timeZone: 'Asia/Makassar', tzLabel: 'WITA' }
+  }
+  return { timeZone: 'Asia/Jakarta', tzLabel: 'WIB' }
+}
+
+function getDatePartsInZone(timeZone: string) {
   const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Jakarta',
+    timeZone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -65,17 +76,30 @@ app.get('/prayer-times', async (c) => {
     }
 
     const matched = pickBestIndonesianCity(candidates, city)
-    const { year, month, day, iso } = getJakartaDateParts()
+    const initialDate = getDatePartsInZone('Asia/Jakarta')
 
-    const jadwalRes = await fetch(
-      `https://api.myquran.com/v2/sholat/jadwal/${matched.id}/${year}/${month}/${day}`
+    let jadwalRes = await fetch(
+      `https://api.myquran.com/v2/sholat/jadwal/${matched.id}/${initialDate.year}/${initialDate.month}/${initialDate.day}`
     )
     if (!jadwalRes.ok) {
       return c.json({ error: 'Gagal mengambil jadwal sholat dari API Kemenag (MyQuran)' }, 502)
     }
-    const jadwalJson: any = await jadwalRes.json()
-    const j = jadwalJson?.data?.jadwal
+    let jadwalJson: any = await jadwalRes.json()
+    const daerah: string = jadwalJson?.data?.daerah || 'INDONESIA'
+    const { timeZone, tzLabel } = resolveIndonesianTimezone(daerah)
 
+    // Jika kota berada di WITA/WIT dan sudah melewati tengah malam lokal dibanding WIB, ambil tanggal lokal kota
+    const localDate = getDatePartsInZone(timeZone)
+    if (localDate.iso !== initialDate.iso) {
+      const localRes = await fetch(
+        `https://api.myquran.com/v2/sholat/jadwal/${matched.id}/${localDate.year}/${localDate.month}/${localDate.day}`
+      )
+      if (localRes.ok) {
+        jadwalJson = await localRes.json()
+      }
+    }
+
+    const j = jadwalJson?.data?.jadwal
     if (!j) {
       return c.json({ error: 'Format jadwal sholat Kemenag tidak valid' }, 502)
     }
@@ -85,8 +109,10 @@ app.get('/prayer-times', async (c) => {
       source: 'myquran-kemenag',
       cityId: String(jadwalJson.data.id || matched.id),
       lokasi: jadwalJson.data.lokasi || matched.lokasi,
-      daerah: jadwalJson.data.daerah || 'INDONESIA',
-      date: j.date || iso,
+      daerah,
+      timeZone,
+      tzLabel,
+      date: j.date || localDate.iso,
       jadwal: {
         imsak: j.imsak,
         subuh: j.subuh,

@@ -18,7 +18,13 @@ import { KalenderView } from './views/KalenderView'
 import { AturView } from './views/AturView'
 import { PrayerView } from './views/PrayerView'
 import { Onboarding } from './components/Onboarding'
-import { fetchPrayerTimes, PrayerSchedule } from './services/prayerService'
+import {
+  CachedPrayerData,
+  computePrayerSchedule,
+  getDateIsoInTimezone,
+  loadCityPrayerData,
+  PrayerSchedule,
+} from './services/prayerService'
 import { fetchHijriHeroData, HijriHeroData } from './services/hijriService'
 
 type DailyLogEntry = {
@@ -102,20 +108,44 @@ export default function App() {
     }
   }, [])
 
-  // Live Prayer Times (Bimas Islam Kemenag RI) & dynamic 1s countdown loop
+  // Live Prayer Times (Bimas Islam Kemenag RI): fetch once per city/day, tick synchronously every 1s
   useEffect(() => {
     let isMounted = true
+    let cachedData: CachedPrayerData | null = null
+    let isRefreshing = false
+    let lastFetchAttempt = 0
 
-    const updateTimes = () => {
-      fetchPrayerTimes(city).then((data) => {
-        if (isMounted && data) {
-          setPrayerSchedule(data)
-        }
-      })
+    const refreshCityData = () => {
+      if (isRefreshing) return
+      isRefreshing = true
+      lastFetchAttempt = Date.now()
+      loadCityPrayerData(city)
+        .then((data) => {
+          if (isMounted && data) {
+            cachedData = data
+            setPrayerSchedule(computePrayerSchedule(data, new Date()))
+          }
+        })
+        .finally(() => {
+          isRefreshing = false
+        })
     }
 
-    updateTimes()
-    const interval = setInterval(updateTimes, 1000)
+    refreshCityData()
+
+    const interval = setInterval(() => {
+      const now = new Date()
+      if (!cachedData) {
+        if (Date.now() - lastFetchAttempt >= 15000) {
+          refreshCityData()
+        }
+        return
+      }
+      if (getDateIsoInTimezone(now, cachedData.timeZone) !== cachedData.dateIso) {
+        refreshCityData()
+      }
+      setPrayerSchedule(computePrayerSchedule(cachedData, now))
+    }, 1000)
 
     return () => {
       isMounted = false
@@ -399,6 +429,7 @@ export default function App() {
                 city={city}
                 gregorianDate={prayerSchedule?.gregorianDate}
                 currentTime={prayerSchedule?.currentTime}
+                tzLabel={prayerSchedule?.tzLabel}
                 arcProgress={prayerSchedule?.arcProgress}
                 nextPrayerName={prayerSchedule?.nextPrayer?.name}
                 nextPrayerTime={prayerSchedule?.nextPrayer?.time}
