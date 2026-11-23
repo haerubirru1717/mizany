@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { RotateCcw, ChevronDown, Plus, Trash2, Vibrate, Check, X } from 'lucide-react'
 
 interface DhikrItem {
@@ -34,21 +34,13 @@ export const TasbihView: React.FC = () => {
   const [showCustomTarget, setShowCustomTarget] = useState<boolean>(false)
   const [customTargetInput, setCustomTargetInput] = useState<string>('33')
   const [tapPulseKey, setTapPulseKey] = useState<number>(0)
+  const [isPressed, setIsPressed] = useState<boolean>(false)
 
   // Add custom dhikr form fields
   const [newLatin, setNewLatin] = useState('')
   const [newArabic, setNewArabic] = useState('')
   const [newMeaning, setNewMeaning] = useState('')
   const [newTarget, setNewTarget] = useState('33')
-
-  const hapticSwitchRef = useRef<HTMLInputElement | null>(null)
-
-  // Enable native iOS Safari 17.4+ Taptic Engine attribute (`switch`) on the hidden checkbox
-  useEffect(() => {
-    if (hapticSwitchRef.current) {
-      hapticSwitchRef.current.setAttribute('switch', '')
-    }
-  }, [])
 
   // Load saved custom dhikr & tasbih state
   useEffect(() => {
@@ -93,7 +85,7 @@ export const TasbihView: React.FC = () => {
     if (!hapticEnabled) return
     if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
       try {
-        navigator.vibrate(isMilestone ? [55, 50, 95] : 30)
+        navigator.vibrate(isMilestone ? [65, 50, 110] : 40)
       } catch {}
     }
   }
@@ -423,31 +415,43 @@ export const TasbihView: React.FC = () => {
         </form>
       )}
 
-      {/* Main Interactive Tap Circle (Sibling iOS switch input + label for real native iOS Taptic & Android vibrate) */}
+      {/* Main Interactive Tap Circle — direct-tap native switch overlay for iOS 18–26.5+ Taptic Engine & Android vibrate */}
       <div className="py-3 flex justify-center">
-        <input
-          ref={hapticSwitchRef}
-          id="tasbih-haptic-switch"
-          type="checkbox"
-          disabled={!hapticEnabled}
-          className="sr-only"
-          aria-hidden="true"
-          tabIndex={-1}
-        />
-        <label
-          htmlFor="tasbih-haptic-switch"
-          role="button"
-          tabIndex={0}
-          onClick={handleTap}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              handleTap()
-            }
-          }}
-          className="relative w-64 h-64 rounded-full flex items-center justify-center cursor-pointer active:scale-[0.94] transition-transform duration-100 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0F50BD]"
-          aria-label={`Hitung dzikir ${activeDhikr.latin}, saat ini ${count} dari ${target}`}
+        <div
+          className={`relative w-64 h-64 rounded-full overflow-hidden flex items-center justify-center transition-transform duration-100 select-none ${
+            isPressed ? 'scale-[0.94]' : ''
+          }`}
         >
+          {/* Direct physical tap target covering the circular area */}
+          {hapticEnabled ? (
+            <input
+              ref={(el) => {
+                if (el) el.setAttribute('switch', '')
+              }}
+              type="checkbox"
+              {...({ switch: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
+              onChange={handleTap}
+              onPointerDown={() => setIsPressed(true)}
+              onPointerUp={() => setIsPressed(false)}
+              onPointerCancel={() => setIsPressed(false)}
+              onPointerLeave={() => setIsPressed(false)}
+              aria-label={`Hitung dzikir ${activeDhikr.latin}, saat ini ${count} dari ${target}`}
+              className="absolute inset-0 z-20 w-full h-full m-0 opacity-0 cursor-pointer"
+              style={{ appearance: 'auto', WebkitAppearance: 'auto' as any }}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={handleTap}
+              onPointerDown={() => setIsPressed(true)}
+              onPointerUp={() => setIsPressed(false)}
+              onPointerCancel={() => setIsPressed(false)}
+              onPointerLeave={() => setIsPressed(false)}
+              aria-label={`Hitung dzikir ${activeDhikr.latin}, saat ini ${count} dari ${target}`}
+              className="absolute inset-0 z-20 w-full h-full m-0 opacity-0 cursor-pointer"
+            />
+          )}
+
           {/* Tactile visual ripple on tap */}
           {tapPulseKey > 0 && (
             <span
@@ -458,7 +462,7 @@ export const TasbihView: React.FC = () => {
           )}
 
           {/* SVG Circular Progress Track */}
-          <svg className="w-full h-full -rotate-90 drop-shadow-md" viewBox="0 0 240 240">
+          <svg className="w-full h-full -rotate-90 drop-shadow-md pointer-events-none" viewBox="0 0 240 240">
             <circle
               cx="120"
               cy="120"
@@ -489,7 +493,7 @@ export const TasbihView: React.FC = () => {
               Ketuk untuk hitung
             </span>
           </div>
-        </label>
+        </div>
       </div>
 
       {/* Bottom Controls: Haptic Toggle & Reset */}
