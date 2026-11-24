@@ -8,6 +8,14 @@ export type MandatoryPrayerKey = 'subuh' | 'dzuhur' | 'ashar' | 'maghrib' | 'isy
 
 export type PrayerChecks = Record<MandatoryPrayerKey, boolean>
 
+export interface DailyLogEntry {
+  done?: boolean
+  value?: number
+  prayers?: PrayerChecks
+}
+
+export type DailyLogsByDate = Record<string, Record<string, DailyLogEntry>>
+
 export interface AmalItem {
   id: string
   name: string

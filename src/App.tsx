@@ -5,6 +5,8 @@ import {
   CustomAmalType,
   MandatoryPrayerKey,
   PrayerChecks,
+  DailyLogEntry,
+  DailyLogsByDate,
 } from './types'
 import { HeroPrayer } from './components/HeroPrayer'
 import { PrayerRow } from './components/PrayerRow'
@@ -28,13 +30,18 @@ import {
   PrayerSchedule,
 } from './services/prayerService'
 import { fetchHijriHeroData, HijriHeroData } from './services/hijriService'
-
-type DailyLogEntry = {
-  done?: boolean
-  value?: number
-  prayers?: PrayerChecks
-}
-type DailyLogsByDate = Record<string, Record<string, DailyLogEntry>>
+import {
+  PAGES_PER_JUZ,
+  diffIsoDays,
+  findLinkedQuranAmal,
+  getDayTilawahPages,
+  getLocalIsoDate,
+  hasCompletedAny,
+  isJuzUnit,
+  isPageUnit,
+  linkedEntryToPages,
+  pagesToLinkedEntry,
+} from './utils/recapStats'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -45,7 +52,6 @@ const DAILY_LOGS_STORAGE_KEY = 'mizany_daily_logs_v1'
 const STREAK_CELEBRATED_KEY = 'mizany_streak_celebrated_date'
 const CITY_MODE_STORAGE_KEY = 'mizany_city_mode_v1'
 const GEO_DECLINED_STORAGE_KEY = 'mizany_geo_declined_v1'
-const PAGES_PER_JUZ = 20
 
 const EMPTY_PRAYER_CHECKS: PrayerChecks = {
   subuh: false,
@@ -53,21 +59,6 @@ const EMPTY_PRAYER_CHECKS: PrayerChecks = {
   ashar: false,
   maghrib: false,
   isya: false,
-}
-
-function getLocalIsoDate(daysOffset = 0): string {
-  const d = new Date()
-  d.setDate(d.getDate() + daysOffset)
-  return d.toLocaleDateString('en-CA')
-}
-
-function hasCompletedAny(dayLog?: Record<string, DailyLogEntry>): boolean {
-  if (!dayLog) return false
-  return Object.values(dayLog).some((entry) => {
-    if (entry.done === true || (entry.value || 0) > 0) return true
-    if (entry.prayers && Object.values(entry.prayers).some(Boolean)) return true
-    return false
-  })
 }
 
 function inferAmalIcon(name: string, type: CustomAmalType): string {
@@ -80,54 +71,11 @@ function inferAmalIcon(name: string, type: CustomAmalType): string {
   return 'star'
 }
 
-function findLinkedQuranAmal(items: AmalItem[]): AmalItem | undefined {
-  return items.find(
-    (item) =>
-      (item.type === 'target' || item.type === 'counter' || item.type === 'checklist') &&
-      /qur|tilawah|tadarus|mushaf|ngaji|mengaji/i.test(item.name)
-  )
-}
-
-function isJuzUnit(unit?: string): boolean {
-  return /juz/i.test(unit || '')
-}
-
-function isPageUnit(unit?: string): boolean {
-  return /hal|lembar|page/i.test(unit || '')
-}
-
-function pagesToLinkedEntry(
-  item: AmalItem,
-  pages: number,
-  effectiveTargetPages: number
-): DailyLogEntry {
-  const safePages = Math.max(0, pages)
-  if (item.type === 'checklist') {
-    return { done: safePages >= Math.max(1, effectiveTargetPages) }
-  }
-  if (isJuzUnit(item.unit)) {
-    return { value: Math.round((safePages / PAGES_PER_JUZ) * 10) / 10 }
-  }
-  return { value: safePages }
-}
-
-function linkedEntryToPages(
-  item: AmalItem,
-  entry: DailyLogEntry,
-  effectiveTargetPages: number
-): number {
-  if (item.type === 'checklist') {
-    return entry.done ? Math.max(1, effectiveTargetPages) : 0
-  }
-  const val = Math.max(0, entry.value || 0)
-  if (isJuzUnit(item.unit)) {
-    return Math.round(val * PAGES_PER_JUZ)
-  }
-  return Math.round(val)
-}
-
 export default function App() {
+  const todayIso = getLocalIsoDate(0)
+
   const [activeTab, setActiveTab] = useState<TabKey>('beranda')
+  const [selectedChecklistDate, setSelectedChecklistDate] = useState<string>(todayIso)
   const [city, setCity] = useState<string>('Kota Tangerang')
   const [cityMode, setCityMode] = useState<'auto' | 'manual'>('auto')
   const [isLocatingCity, setIsLocatingCity] = useState<boolean>(false)
@@ -153,7 +101,6 @@ export default function App() {
   const [showStreakModal, setShowStreakModal] = useState<boolean>(false)
 
   const hasAutoLocatedRef = useRef<boolean>(false)
-  const todayIso = getLocalIsoDate(0)
 
   // Initialize persisted settings & real daily logs from localStorage
   useEffect(() => {
@@ -314,20 +261,22 @@ export default function App() {
     }
   }, [])
 
-  // Helper to update one or more entries in today's daily log atomically & ignite streak celebration once per day
-  const updateTodayEntries = (
+  // Helper to update one or more entries for any target date atomically;
+  // streak celebration ONLY ignites for today's first completed amal (never past backfill edits)
+  const updateDateEntries = (
+    targetIso: string,
     updater: (prevDayLog: Record<string, DailyLogEntry>) => Record<string, DailyLogEntry>
   ) => {
-    const prevDayLog = dailyLogs[todayIso] || {}
-    const wasActiveToday = hasCompletedAny(prevDayLog)
+    const prevDayLog = dailyLogs[targetIso] || {}
+    const wasActive = hasCompletedAny(prevDayLog)
     const nextDayLog = updater(prevDayLog)
-    const isNowActiveToday = hasCompletedAny(nextDayLog)
+    const isNowActive = hasCompletedAny(nextDayLog)
 
     setDailyLogs((prevLogs) => {
-      const dayLog = prevLogs[todayIso] || {}
+      const dayLog = prevLogs[targetIso] || {}
       const updatedLogs: DailyLogsByDate = {
         ...prevLogs,
-        [todayIso]: updater(dayLog),
+        [targetIso]: updater(dayLog),
       }
       try {
         localStorage.setItem(DAILY_LOGS_STORAGE_KEY, JSON.stringify(updatedLogs))
@@ -335,7 +284,7 @@ export default function App() {
       return updatedLogs
     })
 
-    if (!wasActiveToday && isNowActiveToday) {
+    if (targetIso === todayIso && !wasActive && isNowActive) {
       try {
         if (localStorage.getItem(STREAK_CELEBRATED_KEY) !== todayIso) {
           localStorage.setItem(STREAK_CELEBRATED_KEY, todayIso)
@@ -348,7 +297,7 @@ export default function App() {
   }
 
   const updateTodayEntry = (id: string, updater: (prev: DailyLogEntry) => DailyLogEntry) => {
-    updateTodayEntries((dayLog) => ({
+    updateDateEntries(todayIso, (dayLog) => ({
       ...dayLog,
       [id]: updater(dayLog[id] || {}),
     }))
@@ -358,6 +307,8 @@ export default function App() {
   const isRamadan = hijriData?.today?.month === 9
 
   const todayLog = dailyLogs[todayIso] || {}
+  const activeChecklistLog = dailyLogs[selectedChecklistDate] || {}
+  const isViewingTodayChecklist = selectedChecklistDate === todayIso
 
   // Automatically link QuranView with the user's custom Qur'an / Tilawah amal on Beranda (if any)
   const linkedQuranAmal = useMemo(
@@ -379,9 +330,11 @@ export default function App() {
 
   // Default mandatory items ONLY: Sholat 5 Waktu (always locked) + Puasa Ramadan (auto locked in Ramadan)
   const mandatoryAmalItems: AmalItem[] = useMemo(() => {
-    const nextPrayerNote = prayerSchedule?.nextPrayer
-      ? `Berikutnya: ${prayerSchedule.nextPrayer.name} — ${prayerSchedule.nextPrayer.time}`
-      : 'Jadwal Bimas Islam Kemenag RI'
+    const nextPrayerNote = isViewingTodayChecklist
+      ? prayerSchedule?.nextPrayer
+        ? `Berikutnya: ${prayerSchedule.nextPrayer.name} — ${prayerSchedule.nextPrayer.time}`
+        : 'Jadwal Bimas Islam Kemenag RI'
+      : 'Catatan sholat 5 waktu pada tanggal terpilih'
 
     const list: AmalItem[] = [
       {
@@ -409,13 +362,14 @@ export default function App() {
 
     return list
   }, [
+    isViewingTodayChecklist,
     isRamadan,
     prayerSchedule?.nextPrayer?.name,
     prayerSchedule?.nextPrayer?.time,
     prayerSchedule?.timings?.maghrib,
   ])
 
-  // Hydrate mandatory + custom user amals with today's persisted log values
+  // Hydrate mandatory + custom user amals with selectedChecklistDate's persisted log values
   const hydratedItems: AmalItem[] = useMemo(() => {
     const customWithNotes = customAmalItems.map((item) => ({
       ...item,
@@ -427,7 +381,7 @@ export default function App() {
     }))
 
     return [...mandatoryAmalItems, ...customWithNotes].map((item) => {
-      const entry = todayLog[item.id]
+      const entry = activeChecklistLog[item.id]
       if (item.type === 'prayers') {
         return {
           ...item,
@@ -443,7 +397,7 @@ export default function App() {
         value: entry?.value ?? 0,
       }
     })
-  }, [mandatoryAmalItems, customAmalItems, todayLog])
+  }, [mandatoryAmalItems, customAmalItems, activeChecklistLog])
 
   // Compute real streak, 7-day dots, and cumulative Quran pages (including previously logged linked amal)
   const { streakDays, last7DaysActive, totalTilawahPages } = useMemo(() => {
@@ -466,26 +420,16 @@ export default function App() {
 
     let totalPages = 0
     for (const dayLog of Object.values(dailyLogs)) {
-      const directPages = dayLog?.tilawah?.value || 0
-      const linkedEntry = linkedQuranAmal ? dayLog?.[linkedQuranAmal.id] : undefined
-      const linkedPages =
-        linkedQuranAmal && linkedEntry
-          ? linkedEntryToPages(linkedQuranAmal, linkedEntry, effectiveQuranTarget)
-          : 0
-      totalPages += Math.max(directPages, linkedPages)
+      totalPages += getDayTilawahPages(dayLog, linkedQuranAmal, effectiveQuranTarget)
     }
 
     return { streakDays: streak, last7DaysActive: last7, totalTilawahPages: totalPages }
   }, [dailyLogs, todayIso, linkedQuranAmal, effectiveQuranTarget])
 
-  const pagesReadToday = useMemo(() => {
-    const directPages = todayLog.tilawah?.value || 0
-    if (!linkedQuranAmal) return directPages
-    const linkedEntry = todayLog[linkedQuranAmal.id]
-    if (!linkedEntry) return directPages
-    if (todayLog.tilawah !== undefined) return directPages
-    return linkedEntryToPages(linkedQuranAmal, linkedEntry, effectiveQuranTarget)
-  }, [todayLog, linkedQuranAmal, effectiveQuranTarget])
+  const pagesReadToday = useMemo(
+    () => getDayTilawahPages(todayLog, linkedQuranAmal, effectiveQuranTarget),
+    [todayLog, linkedQuranAmal, effectiveQuranTarget]
+  )
 
   const handleCompleteOnboarding = () => {
     setShowOnboarding(false)
@@ -495,20 +439,24 @@ export default function App() {
   }
 
   const handleTogglePrayer = (prayer: MandatoryPrayerKey) => {
-    updateTodayEntry('sholat', (prev) => {
+    updateDateEntries(selectedChecklistDate, (dayLog) => {
+      const prev = dayLog.sholat || {}
       const current = { ...EMPTY_PRAYER_CHECKS, ...(prev.prayers || {}) }
       return {
-        ...prev,
-        prayers: {
-          ...current,
-          [prayer]: !current[prayer],
+        ...dayLog,
+        sholat: {
+          ...prev,
+          prayers: {
+            ...current,
+            [prayer]: !current[prayer],
+          },
         },
       }
     })
   }
 
   const handleToggleCheck = (id: string) => {
-    updateTodayEntries((dayLog) => {
+    updateDateEntries(selectedChecklistDate, (dayLog) => {
       const prev = dayLog[id] || {}
       const nextEntry: DailyLogEntry = { ...prev, done: !prev.done }
       const nextLog: Record<string, DailyLogEntry> = { ...dayLog, [id]: nextEntry }
@@ -522,7 +470,7 @@ export default function App() {
   }
 
   const handleIncrementCounter = (id: string, delta: number) => {
-    updateTodayEntries((dayLog) => {
+    updateDateEntries(selectedChecklistDate, (dayLog) => {
       const prev = dayLog[id] || {}
       const nextEntry: DailyLogEntry = { ...prev, value: Math.max(0, (prev.value || 0) + delta) }
       const nextLog: Record<string, DailyLogEntry> = { ...dayLog, [id]: nextEntry }
@@ -536,7 +484,7 @@ export default function App() {
   }
 
   const handleUpdateValue = (id: string, value: number) => {
-    updateTodayEntries((dayLog) => {
+    updateDateEntries(selectedChecklistDate, (dayLog) => {
       const prev = dayLog[id] || {}
       const nextEntry: DailyLogEntry = { ...prev, value: Math.max(0, value) }
       const nextLog: Record<string, DailyLogEntry> = { ...dayLog, [id]: nextEntry }
@@ -551,7 +499,7 @@ export default function App() {
 
   const handleChangeQuranPages = (nextPages: number) => {
     const safePages = Math.max(0, Math.floor(nextPages))
-    updateTodayEntries((dayLog) => {
+    updateDateEntries(todayIso, (dayLog) => {
       const nextLog: Record<string, DailyLogEntry> = {
         ...dayLog,
         tilawah: { value: safePages },
@@ -725,6 +673,14 @@ export default function App() {
     if (el) el.scrollIntoView({ behavior: 'smooth' })
   }
 
+  const handleOpenChecklistForDate = (isoDate: string) => {
+    const diff = diffIsoDays(isoDate, todayIso)
+    if (diff < 0 || diff > 30) return
+    setSelectedChecklistDate(isoDate)
+    setActiveTab('beranda')
+    setTimeout(() => scrollToSection('checklist-section'), 80)
+  }
+
   return (
     <div className="min-h-screen bg-transparent relative">
       {/* Soft blurred background ambient lights */}
@@ -795,6 +751,9 @@ export default function App() {
 
                 <AmalChecklist
                   items={hydratedItems}
+                  selectedDateIso={selectedChecklistDate}
+                  todayIso={todayIso}
+                  onChangeDate={setSelectedChecklistDate}
                   onTogglePrayer={handleTogglePrayer}
                   onToggleCheck={handleToggleCheck}
                   onIncrementCounter={handleIncrementCounter}
@@ -818,7 +777,16 @@ export default function App() {
             )}
 
             {/* VIEW: KALENDER */}
-            {activeTab === 'kalender' && <KalenderView hijriData={hijriData} />}
+            {activeTab === 'kalender' && (
+              <KalenderView
+                hijriData={hijriData}
+                todayIso={todayIso}
+                dailyLogs={dailyLogs}
+                customAmalItems={customAmalItems}
+                effectiveQuranTarget={effectiveQuranTarget}
+                onOpenChecklistForDate={handleOpenChecklistForDate}
+              />
+            )}
 
             {/* VIEW: ATUR */}
             {activeTab === 'atur' && (

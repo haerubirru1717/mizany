@@ -1,6 +1,11 @@
 import React, { useState } from 'react'
 import { AmalItem, MandatoryPrayerKey } from '../types'
 import {
+  diffIsoDays,
+  formatChecklistDateTitle,
+  shiftIsoDate,
+} from '../utils/recapStats'
+import {
   Check,
   Plus,
   Minus,
@@ -12,16 +17,24 @@ import {
   Utensils,
   Heart,
   Lock,
+  ChevronLeft,
+  ChevronRight,
+  History,
 } from 'lucide-react'
 
 interface AmalChecklistProps {
   items: AmalItem[]
+  selectedDateIso: string
+  todayIso: string
+  onChangeDate: (nextIso: string) => void
   onTogglePrayer: (prayer: MandatoryPrayerKey) => void
   onToggleCheck: (id: string) => void
   onIncrementCounter: (id: string, delta: number) => void
   onUpdateValue: (id: string, value: number) => void
   onOpenAddAmal: () => void
 }
+
+const MAX_BACKFILL_DAYS = 30
 
 const MANDATORY_PRAYERS: { key: MandatoryPrayerKey; label: string }[] = [
   { key: 'subuh', label: 'Subuh' },
@@ -72,6 +85,9 @@ function getItemFraction(item: AmalItem): number {
 
 export const AmalChecklist: React.FC<AmalChecklistProps> = ({
   items,
+  selectedDateIso,
+  todayIso,
+  onChangeDate,
   onTogglePrayer,
   onToggleCheck,
   onIncrementCounter,
@@ -86,6 +102,19 @@ export const AmalChecklist: React.FC<AmalChecklistProps> = ({
     totalCount > 0
       ? Math.round((items.reduce((sum, item) => sum + getItemFraction(item), 0) / totalCount) * 100)
       : 0
+
+  const dateMeta = formatChecklistDateTitle(selectedDateIso, todayIso)
+  const daysBack = diffIsoDays(selectedDateIso, todayIso)
+  const canGoBack = daysBack < MAX_BACKFILL_DAYS
+  const canGoForward = daysBack > 0
+
+  const handleShiftDay = (delta: number) => {
+    const nextIso = shiftIsoDate(selectedDateIso, delta)
+    if (nextIso > todayIso) return
+    if (diffIsoDays(nextIso, todayIso) > MAX_BACKFILL_DAYS) return
+    setExpandedTargetId(null)
+    onChangeDate(nextIso)
+  }
 
   const renderIcon = (iconName: string) => {
     switch (iconName) {
@@ -110,21 +139,68 @@ export const AmalChecklist: React.FC<AmalChecklistProps> = ({
 
   return (
     <div id="checklist-section" className="glass-card p-4 sm:p-5 mt-5">
-      {/* Header with progress */}
-      <div className="flex items-baseline justify-between mb-2">
-        <h3 className="text-base font-bold text-[#101828]">Checklist Hari Ini</h3>
-        <span className="text-xs font-semibold text-[#525252]">
+      {/* Header with compact date navigation & progress */}
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <div className="inline-flex items-center gap-0.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleShiftDay(-1)}
+              disabled={!canGoBack}
+              className="w-6 h-6 rounded-lg bg-black/[0.04] hover:bg-black/[0.08] disabled:opacity-25 flex items-center justify-center text-[#101828] cursor-pointer active:scale-95 transition-all"
+              aria-label="Lihat hari sebelumnya"
+              title="Hari sebelumnya"
+            >
+              <ChevronLeft size={14} strokeWidth={2.5} />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleShiftDay(1)}
+              disabled={!canGoForward}
+              className="w-6 h-6 rounded-lg bg-black/[0.04] hover:bg-black/[0.08] disabled:opacity-25 flex items-center justify-center text-[#101828] cursor-pointer active:scale-95 transition-all"
+              aria-label="Lihat hari berikutnya"
+              title="Hari berikutnya"
+            >
+              <ChevronRight size={14} strokeWidth={2.5} />
+            </button>
+          </div>
+          <h3 className="text-base font-bold text-[#101828] truncate">{dateMeta.title}</h3>
+        </div>
+
+        <span className="text-xs font-semibold text-[#525252] shrink-0 tabular-nums">
           <span className="text-[#0F50BD] font-bold">{completedCount}</span> dari {totalCount} selesai
         </span>
       </div>
 
       {/* Progress Bar */}
-      <div className="w-full h-2 rounded-full bg-black/[0.06] overflow-hidden mb-4">
+      <div className="w-full h-2 rounded-full bg-black/[0.06] overflow-hidden mb-3.5">
         <div
           className="h-full bg-gradient-to-r from-[#0F50BD] to-[#14B8A6] rounded-full transition-all duration-300 ease-out"
           style={{ width: `${progressPercent}%` }}
         />
       </div>
+
+      {/* Calm indicator strip when editing a past date */}
+      {dateMeta.isPast && (
+        <div className="mb-3.5 px-3 py-2 rounded-xl bg-amber-50/80 border border-amber-200/70 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-800 min-w-0">
+            <History size={13} className="shrink-0 text-[#F59E0B]" />
+            <span className="truncate">
+              Koreksi riwayat · <b>{dateMeta.subtitle}</b>
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setExpandedTargetId(null)
+              onChangeDate(todayIso)
+            }}
+            className="px-2.5 py-1 rounded-full bg-[#0F50BD] text-white text-[10.5px] font-bold hover:bg-[#1941B5] cursor-pointer shrink-0 transition-colors"
+          >
+            Ke Hari Ini
+          </button>
+        </div>
+      )}
 
       {/* List of Deeds */}
       <div className="space-y-2.5">
