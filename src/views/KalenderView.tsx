@@ -1,33 +1,76 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
 import {
   HijriHeroData,
-  HijriDayItem,
+  GregorianCalendarMonth,
+  GregorianCalendarDay,
+  GREGORIAN_MONTH_NAMES_ID,
+  GREGORIAN_MONTH_SHORT_ID,
   HIJRI_MONTH_NAMES,
-  fetchHijriMonth,
+  fetchGregorianCalendarMonth,
+  getJavanesePasaran,
+  getWeekdayNameId,
 } from '../services/hijriService'
 
 interface KalenderViewProps {
   hijriData?: HijriHeroData | null
 }
 
-const WEEKDAY_HEADERS = ['Ahd', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
+const WEEKDAY_HEADERS = [
+  { label: 'Ahad', isSunday: true, isFriday: false },
+  { label: 'Senin', isSunday: false, isFriday: false },
+  { label: 'Selasa', isSunday: false, isFriday: false },
+  { label: 'Rabu', isSunday: false, isFriday: false },
+  { label: 'Kamis', isSunday: false, isFriday: false },
+  { label: 'Jumat', isSunday: false, isFriday: true },
+  { label: 'Sabtu', isSunday: false, isFriday: false },
+]
+
+function formatHijriIsoToLabel(hijriIso: string): string {
+  const [y, m, d] = String(hijriIso || '').split('-').map(Number)
+  if (!y || !m || !d) return hijriIso
+  return `${d} ${HIJRI_MONTH_NAMES[m] || `Bulan ${m}`} ${y} H`
+}
+
+function parseIsoParts(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number)
+  return { year: y, month: m, day: d }
+}
 
 export const KalenderView: React.FC<KalenderViewProps> = ({ hijriData }) => {
-  const [viewYear, setViewYear] = useState<number>(hijriData?.today.year || 1448)
-  const [viewMonth, setViewMonth] = useState<number>(hijriData?.today.month || 6)
-  const [monthDays, setMonthDays] = useState<HijriDayItem[]>(hijriData?.days || [])
-  const [loadingMonth, setLoadingMonth] = useState<boolean>(false)
+  const todayIso = useMemo(
+    () => hijriData?.today?.gregorian || new Date().toLocaleDateString('en-CA'),
+    [hijriData?.today?.gregorian]
+  )
+  const todayParts = useMemo(() => parseIsoParts(todayIso), [todayIso])
 
-  // Sync initial view when hijriData arrives
+  const [viewYear, setViewYear] = useState<number>(todayParts.year)
+  const [viewMonth, setViewMonth] = useState<number>(todayParts.month)
+  const [monthData, setMonthData] = useState<GregorianCalendarMonth | null>(null)
+  const [loadingMonth, setLoadingMonth] = useState<boolean>(true)
+  const [selectedIso, setSelectedIso] = useState<string>(todayIso)
+  const [activeSubTab, setActiveSubTab] = useState<'events' | 'puasa'>('events')
+
+  // Sync today when hijriData updates
   useEffect(() => {
-    if (!hijriData) return
-    setViewYear(hijriData.today.year)
-    setViewMonth(hijriData.today.month)
-    setMonthDays(hijriData.days)
-  }, [hijriData])
+    setSelectedIso(todayIso)
+  }, [todayIso])
 
-  const handleShiftMonth = async (delta: number) => {
+  // Fetch official Neo MABIMS Gregorian month data whenever viewYear / viewMonth changes
+  useEffect(() => {
+    let active = true
+    setLoadingMonth(true)
+    fetchGregorianCalendarMonth(viewYear, viewMonth, todayIso).then((data) => {
+      if (!active) return
+      setMonthData(data)
+      setLoadingMonth(false)
+    })
+    return () => {
+      active = false
+    }
+  }, [viewYear, viewMonth, todayIso])
+
+  const handleShiftMonth = (delta: number) => {
     let nextMonth = viewMonth + delta
     let nextYear = viewYear
     if (nextMonth > 12) {
@@ -37,232 +80,454 @@ export const KalenderView: React.FC<KalenderViewProps> = ({ hijriData }) => {
       nextMonth = 12
       nextYear -= 1
     }
-
     setViewYear(nextYear)
     setViewMonth(nextMonth)
-
-    // Reuse cached current month if jumping back to today's month
-    if (
-      hijriData &&
-      nextYear === hijriData.today.year &&
-      nextMonth === hijriData.today.month
-    ) {
-      setMonthDays(hijriData.days)
-      return
-    }
-
-    setLoadingMonth(true)
-    const todayIso = hijriData?.today.gregorian || new Date().toLocaleDateString('en-CA')
-    const result = await fetchHijriMonth(nextYear, nextMonth, todayIso)
-    if (result) {
-      setMonthDays(result.days)
-    }
-    setLoadingMonth(false)
   }
 
-  const isViewingRamadan = viewMonth === 9
-  const monthTitle = `${HIJRI_MONTH_NAMES[viewMonth] || `Bulan ${viewMonth}`} ${viewYear} H`
-  const leadingEmptyCells = monthDays.length > 0 ? monthDays[0].weekdayIndex : 0
-  const isCurrentMonth =
-    hijriData && viewYear === hijriData.today.year && viewMonth === hijriData.today.month
+  const handleJumpToday = () => {
+    setViewYear(todayParts.year)
+    setViewMonth(todayParts.month)
+    setSelectedIso(todayIso)
+  }
+
+  const isCurrentMonth = viewYear === todayParts.year && viewMonth === todayParts.month
+
+  // Map Islamic events by gregorian ISO date for fast blue dot rendering
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, string[]>()
+    const list = monthData?.events || hijriData?.events || []
+    for (const ev of list) {
+      const existing = map.get(ev.gregorian) || []
+      existing.push(ev.name)
+      map.set(ev.gregorian, existing)
+    }
+    return map
+  }, [monthData?.events, hijriData?.events])
+
+  // Leading & trailing muted Gregorian days to form a complete 7-column rectangular calendar grid
+  const { leadingDays, trailingDays } = useMemo(() => {
+    if (!monthData) return { leadingDays: [] as number[], trailingDays: [] as number[] }
+    const prevMonthDaysCount = new Date(Date.UTC(viewYear, viewMonth - 1, 0)).getUTCDate()
+    const leadCount = monthData.firstWeekdayIndex
+    const lead: number[] = []
+    for (let i = leadCount - 1; i >= 0; i--) {
+      lead.push(prevMonthDaysCount - i)
+    }
+
+    const totalUsed = lead.length + monthData.days.length
+    const trailCount = (7 - (totalUsed % 7)) % 7
+    const trail: number[] = []
+    for (let i = 1; i <= trailCount; i++) {
+      trail.push(i)
+    }
+    return { leadingDays: lead, trailingDays: trail }
+  }, [monthData, viewYear, viewMonth])
+
+  // Selected day metadata for the top header bar (defaults to today)
+  const selectedDay: GregorianCalendarDay | null = useMemo(() => {
+    if (!monthData) return null
+    return (
+      monthData.days.find((d) => d.gregorian === selectedIso) ||
+      monthData.days.find((d) => d.isToday) ||
+      monthData.days[0] ||
+      null
+    )
+  }, [monthData, selectedIso])
+
+  const headerGregorianLine = useMemo(() => {
+    if (selectedDay) {
+      return `${selectedDay.weekday} ${selectedDay.pasaran}, ${selectedDay.gregorianFullLabel}`
+    }
+    const wd = getWeekdayNameId(todayIso)
+    const pas = getJavanesePasaran(todayIso)
+    const p = parseIsoParts(todayIso)
+    return `${wd.name} ${pas}, ${p.day} ${GREGORIAN_MONTH_NAMES_ID[p.month] || ''} ${p.year}`
+  }, [selectedDay, todayIso])
+
+  const headerHijriLine = useMemo(() => {
+    if (selectedDay) return selectedDay.hijriFullLabel
+    return hijriData?.formattedDate || 'Memuat kalender Neo MABIMS...'
+  }, [selectedDay, hijriData?.formattedDate])
+
+  // Events occurring in the currently viewed Gregorian month + full year list
+  const monthPrefix = `${viewYear}-${String(viewMonth).padStart(2, '0')}-`
+  const allYearEvents = monthData?.events || hijriData?.events || []
+  const monthEvents = useMemo(
+    () => allYearEvents.filter((ev) => ev.gregorian.startsWith(monthPrefix)),
+    [allYearEvents, monthPrefix]
+  )
+  const displayedEvents = monthEvents.length > 0 ? monthEvents : allYearEvents
+
+  // Sunnah fasting days in the currently viewed Gregorian month
+  const sunnahFastingDays = useMemo(() => {
+    if (!monthData) return []
+    return monthData.days.filter((d) => d.isSunnahFasting || d.isRamadan)
+  }, [monthData])
+
+  const hasRamadanDays = useMemo(
+    () => Boolean(monthData?.days.some((d) => d.isRamadan)),
+    [monthData]
+  )
 
   return (
     <div className="space-y-4 pb-24">
-      {/* Title */}
-      <div>
-        <h1 className="text-2xl font-bold text-[#101828]">Kalender Hijriah</h1>
-        <p className="text-xs text-[#525252] mt-0.5">
-          Kriteria resmi Neo MABIMS · Kementerian Agama RI
-        </p>
-      </div>
-
-      {/* Today & Nearest Event Banner */}
-      <div className="glass-card p-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-11 h-11 rounded-2xl bg-[#0F50BD]/10 text-[#0F50BD] flex items-center justify-center shrink-0">
-            <CalendarIcon size={22} />
-          </div>
-          <div className="min-w-0">
-            <div className="text-sm font-bold text-[#101828] truncate">
-              {hijriData ? hijriData.formattedDate : 'Memuat tanggal...'}
-            </div>
-            <div className="text-xs text-[#525252] truncate">
-              {hijriData
-                ? `${hijriData.today.weekday}, ${hijriData.today.gregorianLabel}`
-                : 'Menghubungkan ke MABIMS...'}
-            </div>
-          </div>
+      {/* Page Title */}
+      <div className="flex items-end justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-bold text-[#101828]">Kalender</h1>
+          <p className="text-xs text-[#525252] mt-0.5">
+            Masehi &amp; Hijriah resmi Neo MABIMS · Kemenag RI
+          </p>
         </div>
-        {hijriData?.nextEvent && (
-          <div className="text-right shrink-0">
-            <div className="text-[10px] font-semibold text-[#525252]">
-              {hijriData.nextEvent.name}
-            </div>
-            <div className="text-sm font-extrabold text-[#0F50BD]">
-              {hijriData.nextEvent.daysLeft === 0
-                ? 'Hari ini'
-                : `${hijriData.nextEvent.daysLeft} hari`}
-            </div>
-          </div>
+        {!isCurrentMonth && (
+          <button
+            type="button"
+            onClick={handleJumpToday}
+            className="px-3 py-1.5 rounded-full bg-[#0F50BD]/10 text-[#0F50BD] text-[11px] font-bold hover:bg-[#0F50BD]/20 cursor-pointer transition-colors shrink-0"
+          >
+            Hari Ini
+          </button>
         )}
       </div>
 
-      {/* Real Monthly Hijri Grid */}
-      <div className="glass-card p-4 sm:p-5">
-        <div className="flex items-center justify-between mb-3">
+      {/* Top Active Date Banner (like NU Online header, in Tazkirah Blue) */}
+      <div className="bg-gradient-to-r from-[#0F50BD] to-[#1941B5] text-white p-4 rounded-[20px] shadow-[0_8px_22px_rgba(25,65,181,0.2)] flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center shrink-0">
+            <CalendarIcon size={20} className="text-white" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[13.5px] font-bold leading-snug truncate">
+              {headerGregorianLine}
+            </div>
+            <div className="text-xs text-white/85 font-medium truncate mt-0.5">
+              {headerHijriLine}
+            </div>
+          </div>
+        </div>
+
+        {selectedDay && !selectedDay.isToday && (
+          <button
+            type="button"
+            onClick={handleJumpToday}
+            className="px-2.5 py-1 rounded-full bg-white/20 border border-white/30 text-[10.5px] font-bold text-white hover:bg-white/30 cursor-pointer shrink-0"
+          >
+            Hari ini
+          </button>
+        )}
+      </div>
+
+      {/* Gregorian-Primary + Small Arabic-Indic Hijri Calendar Card */}
+      <div className="glass-card overflow-hidden">
+        {/* Month Navigation Header */}
+        <div className="px-4 py-3.5 flex items-center justify-between bg-white/80">
           <button
             type="button"
             onClick={() => handleShiftMonth(-1)}
-            className="w-8 h-8 rounded-xl bg-black/[0.04] hover:bg-black/[0.08] flex items-center justify-center text-[#101828] cursor-pointer active:scale-95 transition-all"
+            className="w-8 h-8 rounded-xl bg-black/[0.04] hover:bg-black/[0.08] flex items-center justify-center text-[#0F50BD] cursor-pointer active:scale-95 transition-all"
             aria-label="Bulan sebelumnya"
           >
-            <ChevronLeft size={17} />
+            <ChevronLeft size={18} />
           </button>
 
-          <div className="text-center">
-            <h3 className="text-sm font-bold text-[#101828]">{monthTitle}</h3>
-            {!isCurrentMonth && hijriData && (
-              <button
-                type="button"
-                onClick={() => {
-                  setViewYear(hijriData.today.year)
-                  setViewMonth(hijriData.today.month)
-                  setMonthDays(hijriData.days)
-                }}
-                className="text-[10px] font-semibold text-[#0F50BD] hover:underline cursor-pointer"
-              >
-                Kembali ke bulan ini
-              </button>
-            )}
+          <div className="text-center min-w-0 px-2">
+            <h2 className="text-base font-extrabold text-[#101828] leading-tight">
+              {GREGORIAN_MONTH_NAMES_ID[viewMonth]} {viewYear}
+            </h2>
+            <p className="text-[11.5px] font-medium text-[#525252] mt-0.5 truncate">
+              {monthData?.hijriRangeLabel || 'Memuat rentang Hijriah...'}
+            </p>
           </div>
 
           <button
             type="button"
             onClick={() => handleShiftMonth(1)}
-            className="w-8 h-8 rounded-xl bg-black/[0.04] hover:bg-black/[0.08] flex items-center justify-center text-[#101828] cursor-pointer active:scale-95 transition-all"
+            className="w-8 h-8 rounded-xl bg-black/[0.04] hover:bg-black/[0.08] flex items-center justify-center text-[#0F50BD] cursor-pointer active:scale-95 transition-all"
             aria-label="Bulan berikutnya"
           >
-            <ChevronRight size={17} />
+            <ChevronRight size={18} />
           </button>
         </div>
 
         {/* Weekday Headers */}
-        <div className="grid grid-cols-7 gap-1.5 mb-1.5 text-center">
+        <div className="grid grid-cols-7 bg-[#F7F9FF] border-y border-black/[0.06] text-center">
           {WEEKDAY_HEADERS.map((wd) => (
-            <div key={wd} className="text-[10.5px] font-bold text-[#525252] py-1">
-              {wd}
+            <div
+              key={wd.label}
+              className={`py-2 text-[11px] font-bold ${
+                wd.isSunday
+                  ? 'text-red-600'
+                  : wd.isFriday
+                  ? 'text-[#0F766E]'
+                  : 'text-[#525252]'
+              }`}
+            >
+              {wd.label}
             </div>
           ))}
         </div>
 
-        {/* Calendar Cells */}
-        {loadingMonth || monthDays.length === 0 ? (
-          <div className="py-10 text-center text-xs text-[#525252]">
-            Memuat kalender {monthTitle}...
+        {/* Calendar Grid */}
+        {loadingMonth || !monthData ? (
+          <div className="py-14 text-center text-xs text-[#525252]">
+            Memuat kalender {GREGORIAN_MONTH_NAMES_ID[viewMonth]} {viewYear}...
           </div>
         ) : (
-          <div className="grid grid-cols-7 gap-1.5">
-            {Array.from({ length: leadingEmptyCells }).map((_, idx) => (
-              <div key={`empty-${idx}`} />
+          <div className="grid grid-cols-7 bg-white">
+            {/* Leading days from previous Gregorian month */}
+            {leadingDays.map((dayNum, idx) => (
+              <div
+                key={`lead-${idx}`}
+                className="min-h-[60px] border-r border-b border-black/[0.05] flex items-center justify-center text-[15px] font-bold text-black/20 select-none"
+              >
+                {dayNum}
+              </div>
             ))}
-            {monthDays.map((d) => {
-              const isLailatulQadr = isViewingRamadan && d.day >= 21 && d.day % 2 !== 0
+
+            {/* Current Gregorian month days */}
+            {monthData.days.map((d) => {
+              const isSunday = d.weekdayIndex === 0
+              const isFriday = d.weekdayIndex === 5
+              const isSelected = d.gregorian === selectedIso
+              const hasEvent = eventsByDate.has(d.gregorian)
+
+              const dayColorClass = isSunday
+                ? 'text-red-600'
+                : isFriday
+                ? 'text-[#0F766E]'
+                : 'text-[#101828]'
+
+              const hijriColorClass = isSunday
+                ? 'text-red-500'
+                : isFriday
+                ? 'text-[#0F766E]/90'
+                : 'text-[#525252]'
+
               return (
-                <div
-                  key={d.hijri}
-                  className={`py-1.5 px-0.5 rounded-xl flex flex-col items-center justify-center relative transition-all ${
+                <button
+                  key={d.gregorian}
+                  type="button"
+                  onClick={() => setSelectedIso(d.gregorian)}
+                  aria-label={`${d.weekday} ${d.pasaran}, ${d.gregorianFullLabel}, ${d.hijriFullLabel}`}
+                  className={`min-h-[60px] px-0.5 py-1.5 border-r border-b border-black/[0.05] flex flex-col items-center justify-between relative cursor-pointer transition-colors ${
                     d.isToday
-                      ? 'bg-[#0F50BD] text-white shadow-[0_4px_12px_rgba(15,80,189,0.3)] ring-2 ring-[#0F50BD]/30 font-bold'
-                      : d.isAyyamulBidh
-                      ? 'bg-teal-50/90 text-[#101828] border border-teal-200/80 font-semibold'
-                      : 'bg-white/75 text-[#101828] border border-black/[0.05]'
+                      ? 'bg-[#0F50BD]/[0.09] ring-2 ring-inset ring-[#0F50BD]'
+                      : isSelected
+                      ? 'bg-[#14B8A6]/[0.08] ring-2 ring-inset ring-[#14B8A6]'
+                      : 'hover:bg-[#F7F9FF]'
                   }`}
                 >
-                  <span className="text-[13px] font-bold leading-none">{d.day}</span>
-                  <span
-                    className={`text-[9px] mt-1 leading-none ${
-                      d.isToday ? 'text-white/80' : 'text-[#525252]'
-                    }`}
-                  >
-                    {d.gregorianShort}
+                  {/* Small Arabic-Indic Hijri on left + Big Masehi on right (exact reference format) */}
+                  <div className="flex items-baseline justify-center gap-1 leading-none mt-0.5">
+                    <span className={`text-[10px] font-semibold ${hijriColorClass}`}>
+                      {d.hijriDayArabic}
+                    </span>
+                    <span className={`text-[16px] font-bold tabular-nums ${dayColorClass}`}>
+                      {d.gregorianDay}
+                    </span>
+                  </div>
+
+                  {/* Javanese Pasaran */}
+                  <span className="text-[9.5px] font-medium text-[#525252]/80 leading-tight mt-0.5 truncate max-w-full">
+                    {d.pasaran}
                   </span>
-                  {d.isAyyamulBidh && !isLailatulQadr && (
-                    <span
-                      className={`w-1 h-1 rounded-full mt-0.5 ${
-                        d.isToday ? 'bg-white' : 'bg-[#14B8A6]'
-                      }`}
-                    />
-                  )}
-                  {isLailatulQadr && (
-                    <span className="absolute -top-1 -right-1 text-[#F59E0B]">
-                      <Sparkles size={10} fill="currentColor" />
+
+                  {/* Indicator Dots (Blue = Hari Besar Islam, Amber = Puasa Sunnah) */}
+                  <div className="h-2 flex items-center justify-center gap-1 mt-0.5">
+                    {hasEvent && <span className="w-1.5 h-1.5 rounded-full bg-[#0F50BD]" />}
+                    {d.isSunnahFasting && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
+                    )}
+                    {d.isRamadan && !hasEvent && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#14B8A6]" />
+                    )}
+                  </div>
+
+                  {/* Subtle Lailatul Qadr marker on odd nights 21-29 Ramadan */}
+                  {d.isLailatulQadr && (
+                    <span className="absolute top-0.5 right-0.5 text-[#F59E0B]">
+                      <Sparkles size={9} fill="currentColor" />
                     </span>
                   )}
+                </button>
+              )
+            })}
+
+            {/* Trailing days from next Gregorian month */}
+            {trailingDays.map((dayNum, idx) => {
+              const colIdx = (leadingDays.length + monthData.days.length + idx) % 7
+              return (
+                <div
+                  key={`trail-${idx}`}
+                  className={`min-h-[60px] border-r border-b border-black/[0.05] flex items-center justify-center text-[15px] font-bold select-none ${
+                    colIdx === 5
+                      ? 'text-[#0F766E]/30'
+                      : colIdx === 0
+                      ? 'text-red-500/25'
+                      : 'text-black/20'
+                  }`}
+                >
+                  {dayNum}
                 </div>
               )
             })}
           </div>
         )}
 
-        {/* Legend */}
-        <div className="flex items-center justify-center gap-4 mt-3.5 pt-3 border-t border-black/[0.06] text-[10.5px] text-[#525252]">
+        {/* Compact Legend */}
+        <div className="px-3 py-2.5 bg-[#F7F9FF]/70 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[10.5px] text-[#525252]">
           <span className="flex items-center gap-1.5">
-            <i className="w-2.5 h-2.5 rounded-full bg-[#0F50BD] inline-block" /> Hari ini
+            <i className="w-2 h-2 rounded-full bg-[#F59E0B] inline-block" /> Puasa Sunnah
           </span>
           <span className="flex items-center gap-1.5">
-            <i className="w-2.5 h-2.5 rounded-full bg-[#14B8A6] inline-block" /> Ayyamul Bidh (13–15)
+            <i className="w-2 h-2 rounded-full bg-[#0F50BD] inline-block" /> Hari Besar Islam
           </span>
-          {isViewingRamadan && (
-            <span className="flex items-center gap-1 text-[#F59E0B] font-semibold">
-              <Sparkles size={10} fill="currentColor" /> Malam Ganjil
+          {hasRamadanDays && (
+            <span className="flex items-center gap-1.5">
+              <i className="w-2 h-2 rounded-full bg-[#14B8A6] inline-block" /> Ramadan
             </span>
           )}
         </div>
       </div>
 
-      {/* Real Islamic Events List from MABIMS */}
-      {hijriData && hijriData.events.length > 0 && (
-        <div className="glass-card p-4 sm:p-5">
-          <h3 className="text-sm font-bold text-[#101828] mb-3">
-            Hari Besar Islam {hijriData.today.year} H
-          </h3>
-          <div className="divide-y divide-black/[0.05]">
-            {hijriData.events.map((ev) => (
-              <div key={`${ev.event}-${ev.hijri}`} className="py-2.5 flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <div
-                    className={`text-xs font-bold truncate ${
-                      ev.isPast ? 'text-[#525252]' : 'text-[#101828]'
-                    }`}
-                  >
-                    {ev.name}
-                  </div>
-                  <div className="text-[11px] text-[#525252] mt-0.5">
-                    {ev.gregorianLabel}
-                  </div>
-                </div>
-                <span
-                  className={`px-2.5 py-1 rounded-full text-[10.5px] font-bold shrink-0 ${
-                    ev.isPast
-                      ? 'bg-black/[0.05] text-[#525252]'
-                      : ev.daysLeft === 0
-                      ? 'bg-[#14B8A6]/15 text-[#0F766E]'
-                      : 'bg-[#0F50BD]/10 text-[#0F50BD]'
-                  }`}
-                >
-                  {ev.isPast
-                    ? 'Selesai'
-                    : ev.daysLeft === 0
-                    ? 'Hari ini'
-                    : `${ev.daysLeft} hari lagi`}
-                </span>
-              </div>
-            ))}
-          </div>
+      {/* Bottom Tabbed Info Card (Hari Besar | Puasa Sunnah — like screenshot bottom tabs) */}
+      <div className="glass-card overflow-hidden">
+        <div className="grid grid-cols-2 border-b border-black/[0.06] bg-white/70">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('events')}
+            className={`py-3 text-xs font-bold transition-colors cursor-pointer relative ${
+              activeSubTab === 'events'
+                ? 'text-[#0F50BD]'
+                : 'text-[#525252] hover:text-[#101828]'
+            }`}
+          >
+            Hari Besar
+            {activeSubTab === 'events' && (
+              <span className="absolute bottom-0 inset-x-8 h-[2.5px] rounded-full bg-[#0F50BD]" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('puasa')}
+            className={`py-3 text-xs font-bold transition-colors cursor-pointer relative ${
+              activeSubTab === 'puasa'
+                ? 'text-[#0F50BD]'
+                : 'text-[#525252] hover:text-[#101828]'
+            }`}
+          >
+            Puasa Sunnah
+            {activeSubTab === 'puasa' && (
+              <span className="absolute bottom-0 inset-x-8 h-[2.5px] rounded-full bg-[#0F50BD]" />
+            )}
+          </button>
         </div>
-      )}
 
-      <p className="text-[11px] text-center text-[#525252]/80 mt-2">
+        <div className="p-4">
+          {activeSubTab === 'events' ? (
+            displayedEvents.length > 0 ? (
+              <div className="space-y-2.5">
+                {monthEvents.length === 0 && (
+                  <p className="text-[11px] text-[#525252] mb-1">
+                    Tidak ada hari besar Islam di {GREGORIAN_MONTH_NAMES_ID[viewMonth]} {viewYear}. Menampilkan jadwal tahun ini:
+                  </p>
+                )}
+                <div className="divide-y divide-black/[0.05]">
+                  {displayedEvents.map((ev) => {
+                    const p = parseIsoParts(ev.gregorian)
+                    const wd = getWeekdayNameId(ev.gregorian)
+                    const hijriLabel = formatHijriIsoToLabel(ev.hijri)
+                    return (
+                      <div
+                        key={`${ev.event}-${ev.gregorian}`}
+                        className="py-3 first:pt-1 last:pb-1 flex items-center gap-3"
+                      >
+                        {/* Compact Masehi Date Badge (like screenshot Nov / 10) */}
+                        <div className="w-11 h-12 rounded-xl border border-black/[0.08] bg-[#F7F9FF] flex flex-col items-center justify-center shrink-0">
+                          <span className="text-[9.5px] font-semibold text-[#525252] leading-none">
+                            {GREGORIAN_MONTH_SHORT_ID[p.month]}
+                          </span>
+                          <span className="text-[15px] font-extrabold text-[#0F50BD] leading-tight mt-0.5 tabular-nums">
+                            {p.day}
+                          </span>
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div
+                            className={`text-[13px] font-bold leading-snug ${
+                              ev.isPast ? 'text-[#525252]' : 'text-[#101828]'
+                            }`}
+                          >
+                            {ev.name}
+                          </div>
+                          <div className="text-[11px] text-[#525252] mt-0.5">
+                            {wd.name}, {p.day} {GREGORIAN_MONTH_NAMES_ID[p.month]} {p.year} / {hijriLabel}
+                          </div>
+                        </div>
+
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                            ev.isPast
+                              ? 'bg-black/[0.05] text-[#525252]'
+                              : ev.daysLeft === 0
+                              ? 'bg-[#14B8A6]/15 text-[#0F766E]'
+                              : 'bg-[#0F50BD]/10 text-[#0F50BD]'
+                          }`}
+                        >
+                          {ev.isPast
+                            ? 'Lewat'
+                            : ev.daysLeft === 0
+                            ? 'Hari ini'
+                            : `${ev.daysLeft} hr`}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-center text-[#525252] py-4">
+                Memuat daftar hari besar Islam...
+              </p>
+            )
+          ) : sunnahFastingDays.length > 0 ? (
+            <div className="divide-y divide-black/[0.05]">
+              {sunnahFastingDays.map((d) => (
+                <button
+                  key={d.gregorian}
+                  type="button"
+                  onClick={() => setSelectedIso(d.gregorian)}
+                  className="w-full py-2.5 first:pt-1 last:pb-1 flex items-center gap-3 text-left cursor-pointer hover:bg-black/[0.015] rounded-lg transition-colors"
+                >
+                  <div className="w-11 h-12 rounded-xl border border-amber-200/70 bg-amber-50/70 flex flex-col items-center justify-center shrink-0">
+                    <span className="text-[9.5px] font-semibold text-[#525252] leading-none">
+                      {GREGORIAN_MONTH_SHORT_ID[d.gregorianMonth]}
+                    </span>
+                    <span className="text-[15px] font-extrabold text-[#D97706] leading-tight mt-0.5 tabular-nums">
+                      {d.gregorianDay}
+                    </span>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-bold text-[#101828] leading-snug">
+                      {d.fastingLabels.join(' · ')}
+                    </div>
+                    <div className="text-[11px] text-[#525252] mt-0.5">
+                      {d.weekday} {d.pasaran}, {d.gregorianFullLabel} / {d.hijriFullLabel}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-center text-[#525252] py-4">
+              Tidak ada jadwal puasa sunnah di bulan ini.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <p className="text-[11px] text-center text-[#525252]/80">
         Sumber resmi: Neo MABIMS · Kementerian Agama RI (via mabims.dev)
       </p>
     </div>

@@ -403,4 +403,100 @@ app.get('/hijri/month', async (c) => {
   }
 })
 
+// Endpoint kalender bulanan Masehi dengan tanggal Hijriah resmi Neo MABIMS per hari
+app.get('/hijri/gregorian-month', async (c) => {
+  const year = Number(c.req.query('year'))
+  const month = Number(c.req.query('month'))
+  if (!year || year < 1900 || year > 2100 || !month || month < 1 || month > 12) {
+    return c.json({ error: 'Parameter year dan month (1-12) wajib valid' }, 400)
+  }
+
+  const pad2 = (n: number) => String(n).padStart(2, '0')
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  const firstIso = `${year}-${pad2(month)}-01`
+  const lastIso = `${year}-${pad2(month)}-${pad2(daysInMonth)}`
+
+  try {
+    const [startRes, endRes] = await Promise.all([
+      fetch(`https://api.mabims.dev/api/v1/convert?date=${firstIso}`),
+      fetch(`https://api.mabims.dev/api/v1/convert?date=${lastIso}`),
+    ])
+
+    if (!startRes.ok || !endRes.ok) {
+      return c.json({ error: 'Gagal mengonversi batas bulan ke Hijriah MABIMS' }, 502)
+    }
+
+    const startJson: any = await startRes.json()
+    const endJson: any = await endRes.json()
+    const sOut = startJson?.output
+    const eOut = endJson?.output
+    if (!sOut?.year || !sOut?.month || !eOut?.year || !eOut?.month) {
+      return c.json({ error: 'Respons konversi MABIMS tidak valid' }, 502)
+    }
+
+    // Collect all overlapping Hijri months (normally 2, rarely 3)
+    const hijriPairs: Array<{ year: number; month: number }> = []
+    let cy = Number(sOut.year)
+    let cm = Number(sOut.month)
+    for (let guard = 0; guard < 4; guard++) {
+      hijriPairs.push({ year: cy, month: cm })
+      if (cy === Number(eOut.year) && cm === Number(eOut.month)) break
+      cm += 1
+      if (cm > 12) {
+        cm = 1
+        cy += 1
+      }
+    }
+
+    const distinctHijriYears = Array.from(new Set(hijriPairs.map((p) => p.year)))
+
+    const [monthResults, eventResults] = await Promise.all([
+      Promise.all(
+        hijriPairs.map(async (p) => {
+          const r = await fetch(`https://api.mabims.dev/api/v1/month?year=${p.year}&month=${p.month}`)
+          if (!r.ok) return []
+          const j: any = await r.json()
+          return Array.isArray(j?.items) ? j.items : []
+        })
+      ),
+      Promise.all(
+        distinctHijriYears.map(async (hy) => {
+          const r = await fetch(`https://api.mabims.dev/api/v1/events?year=${hy}`)
+          if (!r.ok) return []
+          const j: any = await r.json()
+          return Array.isArray(j?.events) ? j.events : []
+        })
+      ),
+    ])
+
+    const byGreg = new Map<string, any>()
+    for (const list of monthResults) {
+      for (const item of list) {
+        if (item?.gregorian && item.gregorian >= firstIso && item.gregorian <= lastIso) {
+          byGreg.set(item.gregorian, item)
+        }
+      }
+    }
+
+    const days = Array.from(byGreg.values()).sort((a, b) => a.gregorian.localeCompare(b.gregorian))
+    const events = eventResults
+      .flat()
+      .filter((ev) => ev?.gregorian)
+      .sort((a, b) => a.gregorian.localeCompare(b.gregorian))
+
+    c.header('Cache-Control', 'public, max-age=86400')
+    return c.json({
+      source: 'mabims',
+      year,
+      month,
+      daysInMonth,
+      hijriMonths: hijriPairs,
+      days,
+      events,
+    })
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Server error' }, 500)
+  }
+})
+
 export const onRequest = handle(app)

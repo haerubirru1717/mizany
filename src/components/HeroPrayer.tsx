@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { MosqueSkyline } from './MosqueSkyline'
-import { HijriHeroData } from '../services/hijriService'
+import { HijriHeroData, toArabicIndic } from '../services/hijriService'
 import { MapPin, Bell, Clock, ChevronRight, RotateCw, CalendarDays } from 'lucide-react'
 
 const ARC_LENGTH = 383.27 // Exact semicircle length for r=122 (Math.PI * 122)
@@ -348,33 +348,45 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
                   {hijriData.today.gregorianLabel}
                 </div>
 
-                {/* 7-Day Hijri Week Strip */}
+                {/* 7-Day Week Strip (Big Masehi + Small Arabic-Indic Hijri) */}
                 {hijriData.weekStrip.length > 0 && (
                   <div className="grid grid-cols-7 gap-1.5 w-full max-w-[320px] mt-3.5">
-                    {hijriData.weekStrip.map((d) => (
-                      <div
-                        key={d.hijri}
-                        className={`py-1.5 rounded-xl flex flex-col items-center justify-center transition-all ${
-                          d.isToday
-                            ? 'bg-white text-[#0F50BD] shadow-sm font-bold'
-                            : 'bg-white/12 text-white/90 border border-white/15'
-                        }`}
-                      >
-                        <span
-                          className={`text-[9.5px] font-semibold leading-none ${
-                            d.isToday ? 'text-[#0F50BD]/80' : 'text-[#8BA0F3]'
+                    {hijriData.weekStrip.map((d) => {
+                      const gregDay = Number(String(d.gregorian || '').split('-')[2]) || d.day
+                      return (
+                        <div
+                          key={d.hijri}
+                          className={`py-1.5 rounded-xl flex flex-col items-center justify-center transition-all ${
+                            d.isToday
+                              ? 'bg-white text-[#0F50BD] shadow-sm font-bold'
+                              : 'bg-white/12 text-white/90 border border-white/15'
                           }`}
                         >
-                          {d.weekdayShort}
-                        </span>
-                        <span className="text-[13px] font-bold mt-1 leading-none">{d.day}</span>
-                        <span
-                          className={`w-1 h-1 rounded-full mt-1 ${
-                            d.isAyyamulBidh ? 'bg-[#14B8A6]' : 'bg-transparent'
-                          }`}
-                        />
-                      </div>
-                    ))}
+                          <span
+                            className={`text-[9px] font-semibold leading-none ${
+                              d.isToday ? 'text-[#0F50BD]/80' : 'text-[#8BA0F3]'
+                            }`}
+                          >
+                            {d.weekdayShort}
+                          </span>
+                          <div className="flex items-baseline justify-center gap-0.5 mt-1 leading-none">
+                            <span
+                              className={`text-[8.5px] font-semibold ${
+                                d.isToday ? 'text-[#0F50BD]/75' : 'text-white/70'
+                              }`}
+                            >
+                              {toArabicIndic(d.day)}
+                            </span>
+                            <span className="text-[13px] font-bold tabular-nums">{gregDay}</span>
+                          </div>
+                          <span
+                            className={`w-1 h-1 rounded-full mt-1 ${
+                              d.isAyyamulBidh ? 'bg-[#14B8A6]' : 'bg-transparent'
+                            }`}
+                          />
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
 
