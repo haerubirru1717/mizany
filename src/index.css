@@ -95,6 +95,93 @@ textarea,
   animation: viewFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Synchronized dual-wipe inside filled arc: translucent wash leads, exact base color sweeps right behind */
+@keyframes arcWipeTransparent {
+  0% {
+    stroke-dashoffset: 383.27;
+    opacity: 1;
+  }
+  42% {
+    stroke-dashoffset: var(--arc-offset);
+    opacity: 1;
+  }
+  56% {
+    stroke-dashoffset: var(--arc-offset);
+    opacity: 1;
+  }
+  58% {
+    stroke-dashoffset: var(--arc-offset);
+    opacity: 0;
+  }
+  100% {
+    stroke-dashoffset: 383.27;
+    opacity: 0;
+  }
+}
+
+@keyframes arcWipeColor {
+  0% {
+    stroke-dashoffset: 383.27;
+    opacity: 1;
+  }
+  10% {
+    stroke-dashoffset: 383.27;
+    opacity: 1;
+  }
+  54% {
+    stroke-dashoffset: var(--arc-offset);
+    opacity: 1;
+  }
+  60% {
+    stroke-dashoffset: var(--arc-offset);
+    opacity: 1;
+  }
+  62% {
+    stroke-dashoffset: var(--arc-offset);
+    opacity: 0;
+  }
+  100% {
+    stroke-dashoffset: 383.27;
+    opacity: 0;
+  }
+}
+
+.arc-wave-transparent {
+  stroke-dashoffset: 383.27;
+  animation: arcWipeTransparent 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.arc-wave-color {
+  stroke-dashoffset: 383.27;
+  animation: arcWipeColor 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* One-way forward-dissolving echo at the active progress tip (never retracts or overshoots 100%) */
+@keyframes arcTipForwardEcho {
+  0%, 36% {
+    stroke-dashoffset: var(--arc-offset);
+    opacity: 0;
+  }
+  42% {
+    stroke-dashoffset: var(--arc-echo-mid);
+    opacity: 0.48;
+  }
+  74% {
+    stroke-dashoffset: var(--arc-echo-end);
+    opacity: 0;
+  }
+  75%, 100% {
+    stroke-dashoffset: var(--arc-offset);
+    opacity: 0;
+  }
+}
+
+.arc-tip-echo {
+  opacity: 0;
+  stroke-dashoffset: var(--arc-offset);
+  animation: arcTipForwardEcho 3.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
 /* 3D Hero Card Flip (Prayer <-> Kalender Hijriah MABIMS) */
 .hero-flip-scene {
   perspective: 1400px;
@@ -321,6 +408,9 @@ textarea,
 @media (prefers-reduced-motion: reduce) {
   .view-enter,
   .hero-flip-inner,
+  .arc-wave-transparent,
+  .arc-wave-color,
+  .arc-tip-echo,
   .streak-flame-outer,
   .streak-flame-inner,
   .streak-ember,

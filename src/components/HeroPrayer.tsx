@@ -57,10 +57,10 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
 
     const startTimer = setTimeout(() => {
       setAnimatedOffset(latestTargetOffsetRef.current)
-    }, 60)
+    }, 80)
     const settleTimer = setTimeout(() => {
       setIsSettled(true)
-    }, 1050)
+    }, 1480)
 
     return () => {
       clearTimeout(startTimer)
@@ -74,10 +74,14 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
     setAnimatedOffset(targetOffset)
   }, [hasRealProgress, isSettled, targetOffset])
 
+  const echoMid = Number(Math.max(0, animatedOffset - 3).toFixed(2))
+  const echoEnd = Number(Math.max(0, animatedOffset - 22).toFixed(2))
   const showActiveStroke = hasRealProgress && clampedProgress >= 0.002
+  const showWave = isSettled && clampedProgress >= 0.015
+  const showTipEcho = isSettled && clampedProgress >= 0.015 && animatedOffset >= 1
   const arcTransitionClass = isSettled
     ? 'transition-[stroke-dashoffset] duration-700 ease-out'
-    : 'transition-[stroke-dashoffset] duration-[950ms] ease-[cubic-bezier(0.22,1,0.36,1)]'
+    : 'transition-[stroke-dashoffset] duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]'
 
   const fallbackTodayGreg = new Date().toLocaleDateString('id-ID', {
     day: 'numeric',
@@ -150,13 +154,31 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
                 className="w-full h-auto drop-shadow-sm"
                 fill="none"
                 aria-hidden="true"
+                style={
+                  {
+                    '--arc-offset': animatedOffset,
+                    '--arc-echo-mid': echoMid,
+                    '--arc-echo-end': echoEnd,
+                  } as React.CSSProperties
+                }
               >
                 <defs>
                   <linearGradient id="heroGrad" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#93C5FD" />
+                    <stop offset="0%" stopColor="#8BA0F3" />
                     <stop offset="55%" stopColor="#14B8A6" />
                     <stop offset="100%" stopColor="#5EEAD4" />
                   </linearGradient>
+                  <mask id="arcFillMask">
+                    <path
+                      d="M28 156 A122 122 0 0 1 272 156"
+                      stroke="#FFFFFF"
+                      strokeWidth="17"
+                      strokeLinecap="round"
+                      strokeDasharray={ARC_LENGTH}
+                      strokeDashoffset={animatedOffset}
+                      className={arcTransitionClass}
+                    />
+                  </mask>
                 </defs>
                 {/* Base empty track */}
                 <path
@@ -165,7 +187,18 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
                   strokeWidth="17"
                   strokeLinecap="round"
                 />
-                {/* Live progress track */}
+                {/* One-way forward-dissolving echo behind tip — pushes forward into empty track and fades out */}
+                {showTipEcho && (
+                  <path
+                    d="M28 156 A122 122 0 0 1 272 156"
+                    stroke="url(#heroGrad)"
+                    strokeWidth="17"
+                    strokeLinecap="round"
+                    strokeDasharray={ARC_LENGTH}
+                    className="arc-tip-echo"
+                  />
+                )}
+                {/* Stationary active progress track synced to real elapsed time */}
                 {showActiveStroke && (
                   <path
                     d="M28 156 A122 122 0 0 1 272 156"
@@ -176,6 +209,27 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
                     strokeDashoffset={animatedOffset}
                     className={arcTransitionClass}
                   />
+                )}
+                {/* Synchronized 2-layer dual-wipe: translucent wash leads, exact heroGrad sweeps right behind */}
+                {showWave && (
+                  <g mask="url(#arcFillMask)">
+                    <path
+                      d="M28 156 A122 122 0 0 1 272 156"
+                      stroke="rgba(255, 255, 255, 0.36)"
+                      strokeWidth="17"
+                      strokeLinecap="round"
+                      strokeDasharray={ARC_LENGTH}
+                      className="arc-wave-transparent"
+                    />
+                    <path
+                      d="M28 156 A122 122 0 0 1 272 156"
+                      stroke="url(#heroGrad)"
+                      strokeWidth="17.6"
+                      strokeLinecap="round"
+                      strokeDasharray={ARC_LENGTH}
+                      className="arc-wave-color"
+                    />
+                  </g>
                 )}
               </svg>
 
