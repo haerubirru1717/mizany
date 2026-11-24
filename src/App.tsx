@@ -450,6 +450,15 @@ export default function App() {
     [todayLog, linkedQuranAmal, effectiveQuranTarget]
   )
 
+  const last7TilawahPages = useMemo(() => {
+    const days: { iso: string; pages: number }[] = []
+    for (let offset = -6; offset <= 0; offset++) {
+      const iso = getLocalIsoDate(offset)
+      days.push({ iso, pages: getDayTilawahPages(dailyLogs[iso], linkedQuranAmal, effectiveQuranTarget) })
+    }
+    return days
+  }, [dailyLogs, todayIso, linkedQuranAmal, effectiveQuranTarget])
+
   const handleCompleteOnboarding = () => {
     setShowOnboarding(false)
     try {
@@ -787,6 +796,7 @@ export default function App() {
                 dailyTarget={effectiveQuranTarget}
                 pagesReadToday={pagesReadToday}
                 totalPagesRead={totalTilawahPages}
+                last7Pages={last7TilawahPages}
                 hijriDateLabel={hijriData?.formattedDate}
                 linkedAmalName={linkedQuranAmal?.name}
                 onChangePagesToday={handleChangeQuranPages}
