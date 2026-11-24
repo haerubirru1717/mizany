@@ -593,7 +593,7 @@ export default function App() {
   }
 
   const handleOpenEditAmal = (item: AmalItem) => {
-    if (item.isLocked) return
+    if (item.isLocked || item.type !== 'target') return
     setEditingAmal(item)
     setAmalModalOpen(true)
   }
@@ -605,8 +605,28 @@ export default function App() {
     target?: number
     unit?: string
   }) => {
+    if (data.id) {
+      // Edit mode: strictly update target number only so historical logs never change meaning/unit
+      const nextTarget = Math.max(1, Math.round(data.target || 1))
+      const updated = customAmalItems.map((item) =>
+        item.id === data.id && item.type === 'target' ? { ...item, target: nextTarget } : item
+      )
+      setCustomAmalItems(updated)
+      try {
+        localStorage.setItem('mizany_custom_amal', JSON.stringify(updated))
+      } catch {}
+
+      if (linkedQuranAmal?.id === data.id && isPageUnit(linkedQuranAmal.unit)) {
+        setTilawahTarget(nextTarget)
+        try {
+          localStorage.setItem('mizany_tilawah_target', String(nextTarget))
+        } catch {}
+      }
+      return
+    }
+
     const icon = inferAmalIcon(data.name, data.type)
-    const newId = data.id || `custom_${Date.now()}`
+    const newId = `custom_${Date.now()}`
     const newItem: AmalItem = {
       id: newId,
       name: data.name,
@@ -617,17 +637,14 @@ export default function App() {
       isCustom: true,
     }
 
-    const updated = data.id
-      ? customAmalItems.map((item) => (item.id === data.id ? { ...item, ...newItem } : item))
-      : [...customAmalItems, newItem]
-
+    const updated = [...customAmalItems, newItem]
     setCustomAmalItems(updated)
     try {
       localStorage.setItem('mizany_custom_amal', JSON.stringify(updated))
     } catch {}
 
     // If user newly created a Qur'an amal while already logging pages in QuranView today, sync it immediately
-    if (!data.id && findLinkedQuranAmal([newItem]) && pagesReadToday > 0) {
+    if (findLinkedQuranAmal([newItem]) && pagesReadToday > 0) {
       const targetPages =
         newItem.type === 'target' && newItem.target
           ? isJuzUnit(newItem.unit)
@@ -783,7 +800,6 @@ export default function App() {
                   onIncrementCounter={handleIncrementCounter}
                   onUpdateValue={handleUpdateValue}
                   onOpenAddAmal={handleOpenAddAmal}
-                  onEditAmal={handleOpenEditAmal}
                 />
               </div>
             )}

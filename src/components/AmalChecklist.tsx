@@ -11,7 +11,6 @@ import {
   Gift,
   Utensils,
   Heart,
-  Pencil,
   Lock,
 } from 'lucide-react'
 
@@ -22,7 +21,6 @@ interface AmalChecklistProps {
   onIncrementCounter: (id: string, delta: number) => void
   onUpdateValue: (id: string, value: number) => void
   onOpenAddAmal: () => void
-  onEditAmal: (item: AmalItem) => void
 }
 
 const MANDATORY_PRAYERS: { key: MandatoryPrayerKey; label: string }[] = [
@@ -79,7 +77,6 @@ export const AmalChecklist: React.FC<AmalChecklistProps> = ({
   onIncrementCounter,
   onUpdateValue,
   onOpenAddAmal,
-  onEditAmal,
 }) => {
   const [expandedTargetId, setExpandedTargetId] = useState<string | null>(null)
 
@@ -253,24 +250,11 @@ export const AmalChecklist: React.FC<AmalChecklistProps> = ({
                     >
                       {item.name}
                     </span>
-                    {item.isLocked ? (
+                    {item.isLocked && (
                       <span className="inline-flex items-center gap-0.5 text-[9.5px] font-bold px-1.5 py-0.5 rounded-md bg-[#0F50BD]/10 text-[#0F50BD] shrink-0">
                         <Lock size={9} />
                         Wajib
                       </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setExpandedTargetId(null)
-                          onEditAmal(item)
-                        }}
-                        className="p-1 rounded-lg text-[#525252]/70 hover:text-[#0F50BD] hover:bg-[#0F50BD]/10 cursor-pointer transition-colors shrink-0"
-                        aria-label={`Edit ${item.name}`}
-                        title="Edit amal"
-                      >
-                        <Pencil size={12} />
-                      </button>
                     )}
                   </div>
                   {item.note && (

@@ -338,14 +338,17 @@ export const AturView: React.FC<AturViewProps> = ({
                   <div className="text-[11px] text-[#525252]">{formatAmalSubtitle(item)}</div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => onEditAmal(item)}
-                    className="w-8 h-8 rounded-lg text-[#0F50BD] hover:bg-[#0F50BD]/10 flex items-center justify-center cursor-pointer transition-colors"
-                    aria-label={`Edit ${item.name}`}
-                  >
-                    <Pencil size={15} />
-                  </button>
+                  {item.type === 'target' && (
+                    <button
+                      type="button"
+                      onClick={() => onEditAmal(item)}
+                      className="w-8 h-8 rounded-lg text-[#0F50BD] hover:bg-[#0F50BD]/10 flex items-center justify-center cursor-pointer transition-colors"
+                      aria-label={`Ubah target ${item.name}`}
+                      title="Ubah target"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => onDeleteCustomAmal(item.id)}
