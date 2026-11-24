@@ -99,12 +99,21 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
         {/* ================= FRONT FACE: PRAYER HERO ================= */}
         <div
           aria-hidden={isFlipped}
-          className={`hero-flip-face relative overflow-hidden bg-gradient-to-b from-[#1941B5] to-[#0F50BD] text-white pt-[calc(18px+env(safe-area-inset-top))] px-5 pb-5 rounded-b-[28px] shadow-[0_10px_28px_rgba(25,65,181,0.22)] flex flex-col justify-between ${
+          className={`hero-flip-face group relative overflow-hidden bg-gradient-to-b from-[#1941B5] to-[#0F50BD] text-white pt-[calc(18px+env(safe-area-inset-top))] px-5 pb-5 rounded-b-[28px] shadow-[0_10px_28px_rgba(25,65,181,0.22)] flex flex-col justify-between ${
             isFlipped ? 'pointer-events-none' : ''
           }`}
         >
-          {/* Top row: Date/Location & Explicit Hijri Flip Pill */}
-          <div className="flex items-start justify-between gap-2 relative z-10">
+          {/* Full-card flip trigger (sibling to inner action buttons — entire card surface flips cleanly) */}
+          <button
+            type="button"
+            tabIndex={isFlipped ? -1 : 0}
+            onClick={() => setIsFlipped(true)}
+            aria-label="Ketuk kartu untuk melihat ringkasan Kalender Hijriah"
+            className="absolute inset-0 z-0 w-full h-full cursor-pointer rounded-b-[28px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/80"
+          />
+
+          {/* Top row: Date/Location & Hijri Flip Indicator */}
+          <div className="flex items-start justify-between gap-2 relative z-10 pointer-events-none">
             <div className="min-w-0">
               <div className="text-[15px] font-bold text-white leading-tight truncate">
                 {displayHijriDate}
@@ -119,16 +128,13 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
               </div>
             </div>
 
-            <button
-              type="button"
-              tabIndex={isFlipped ? -1 : 0}
-              onClick={() => setIsFlipped(true)}
-              className="shrink-0 min-h-[38px] px-3 py-1.5 rounded-xl bg-white/18 border border-white/30 backdrop-blur-sm text-white text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/25 active:scale-95 transition-all cursor-pointer"
-              aria-label="Balik kartu ke ringkasan Kalender Hijriah"
+            <span
+              aria-hidden="true"
+              className="shrink-0 min-h-[36px] px-3 py-1.5 rounded-xl bg-white/18 border border-white/30 backdrop-blur-sm text-white text-xs font-semibold inline-flex items-center gap-1.5 group-hover:bg-white/25 transition-colors"
             >
-              <CalendarDays size={14} aria-hidden="true" />
+              <CalendarDays size={14} />
               <span>Hijriah</span>
-            </button>
+            </span>
           </div>
 
           {/* Mosque Skyline Horizon */}
@@ -137,7 +143,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
           </div>
 
           {/* Wide Lush Semicircular Arc Gauge */}
-          <div className="relative z-10 mt-0.5 max-w-[304px] mx-auto w-full">
+          <div className="relative z-10 mt-0.5 max-w-[304px] mx-auto w-full pointer-events-none">
             <div className="relative">
               <svg
                 viewBox="0 0 300 168"
@@ -193,7 +199,9 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
                     type="button"
                     tabIndex={isFlipped ? -1 : 0}
                     onClick={onRetryPrayer}
-                    className="pointer-events-auto mt-2 px-3.5 py-1 rounded-full bg-white text-[#0F50BD] text-xs font-bold inline-flex items-center gap-1 cursor-pointer hover:bg-blue-50 shadow-sm"
+                    className={`relative z-20 mt-2 px-3.5 py-1 rounded-full bg-white text-[#0F50BD] text-xs font-bold inline-flex items-center gap-1 cursor-pointer hover:bg-blue-50 shadow-sm ${
+                      isFlipped ? 'pointer-events-none' : 'pointer-events-auto'
+                    }`}
                   >
                     <RefreshCw size={12} />
                     <span>Muat Ulang</span>
@@ -224,7 +232,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
           </div>
 
           {/* Live Clock Strip & Full Schedule Link */}
-          <div className="relative z-10 mt-3 pt-3 border-t border-white/15 flex items-center justify-between text-xs text-white">
+          <div className="relative z-10 mt-3 pt-3 border-t border-white/15 flex items-center justify-between text-xs text-white pointer-events-none">
             <div className="flex items-center gap-1.5 tabular-nums">
               <Clock size={15} className="text-[#DBEAFE]" aria-hidden="true" />
               <span className="font-semibold">
@@ -238,7 +246,9 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
               type="button"
               tabIndex={isFlipped ? -1 : 0}
               onClick={() => onOpenPrayerDetail?.()}
-              className="inline-flex items-center gap-1 -mr-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white hover:bg-white/15 active:scale-95 transition-all cursor-pointer"
+              className={`relative z-20 inline-flex items-center gap-1 -mr-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white hover:bg-white/15 active:scale-95 transition-all cursor-pointer ${
+                isFlipped ? 'pointer-events-none' : 'pointer-events-auto'
+              }`}
             >
               <span>Jadwal Lengkap</span>
               <ChevronRight size={14} className="text-[#DBEAFE]" aria-hidden="true" />
@@ -249,12 +259,21 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
         {/* ================= BACK FACE: KALENDER HIJRIAH (MABIMS) ================= */}
         <div
           aria-hidden={!isFlipped}
-          className={`hero-flip-face hero-flip-back relative overflow-hidden bg-gradient-to-b from-[#1941B5] to-[#0F50BD] text-white pt-[calc(18px+env(safe-area-inset-top))] px-5 pb-5 rounded-b-[28px] shadow-[0_10px_28px_rgba(25,65,181,0.22)] flex flex-col justify-between ${
+          className={`hero-flip-face hero-flip-back group relative overflow-hidden bg-gradient-to-b from-[#1941B5] to-[#0F50BD] text-white pt-[calc(18px+env(safe-area-inset-top))] px-5 pb-5 rounded-b-[28px] shadow-[0_10px_28px_rgba(25,65,181,0.22)] flex flex-col justify-between ${
             !isFlipped ? 'pointer-events-none' : ''
           }`}
         >
-          {/* Top row: Hijri Header & Explicit Flip Back Button */}
-          <div className="flex items-start justify-between gap-2 relative z-10">
+          {/* Full-card flip-back trigger */}
+          <button
+            type="button"
+            tabIndex={isFlipped ? 0 : -1}
+            onClick={() => setIsFlipped(false)}
+            aria-label="Ketuk kartu untuk kembali ke hitung mundur waktu sholat"
+            className="absolute inset-0 z-0 w-full h-full cursor-pointer rounded-b-[28px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/80"
+          />
+
+          {/* Top row: Hijri Header & Flip Back Indicator */}
+          <div className="flex items-start justify-between gap-2 relative z-10 pointer-events-none">
             <div className="min-w-0">
               <div className="text-[15px] font-bold text-white leading-tight">
                 Kalender Hijriah
@@ -266,16 +285,13 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
               </div>
             </div>
 
-            <button
-              type="button"
-              tabIndex={isFlipped ? 0 : -1}
-              onClick={() => setIsFlipped(false)}
-              className="shrink-0 min-h-[38px] px-3 py-1.5 rounded-xl bg-white/18 border border-white/30 backdrop-blur-sm text-white text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/25 active:scale-95 transition-all cursor-pointer"
-              aria-label="Kembali ke hitung mundur waktu sholat"
+            <span
+              aria-hidden="true"
+              className="shrink-0 min-h-[36px] px-3 py-1.5 rounded-xl bg-white/18 border border-white/30 backdrop-blur-sm text-white text-xs font-semibold inline-flex items-center gap-1.5 group-hover:bg-white/25 transition-colors"
             >
-              <RotateCw size={14} aria-hidden="true" />
+              <RotateCw size={14} />
               <span>Jadwal</span>
-            </button>
+            </span>
           </div>
 
           {/* Mosque Skyline Horizon */}
@@ -284,7 +300,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
           </div>
 
           {/* Center: Today Hijri Highlight + 7-Day MABIMS Strip + Next Event */}
-          <div className="relative z-10 my-auto py-3 flex flex-col items-center text-center">
+          <div className="relative z-10 my-auto py-3 flex flex-col items-center text-center pointer-events-none">
             {hijriData ? (
               <>
                 <div className="flex items-baseline justify-center gap-2">
@@ -363,7 +379,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
           </div>
 
           {/* Bottom Strip */}
-          <div className="relative z-10 mt-2 pt-3 border-t border-white/15 flex items-center justify-between text-xs text-white">
+          <div className="relative z-10 mt-2 pt-3 border-t border-white/15 flex items-center justify-between text-xs text-white pointer-events-none">
             <div className="flex items-center gap-1.5 text-[#DBEAFE]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#5EEAD4]" aria-hidden="true" />
               <span>Neo MABIMS · Kemenag RI</span>
@@ -372,7 +388,9 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
               type="button"
               tabIndex={isFlipped ? 0 : -1}
               onClick={() => onOpenCalendar?.()}
-              className="inline-flex items-center gap-1 -mr-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white hover:bg-white/15 active:scale-95 transition-all cursor-pointer"
+              className={`relative z-20 inline-flex items-center gap-1 -mr-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white hover:bg-white/15 active:scale-95 transition-all cursor-pointer ${
+                isFlipped ? 'pointer-events-auto' : 'pointer-events-none'
+              }`}
             >
               <span>Buka Kalender</span>
               <ChevronRight size={14} className="text-[#DBEAFE]" aria-hidden="true" />
