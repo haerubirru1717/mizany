@@ -1,13 +1,11 @@
 import React from 'react'
 import { TabKey } from '../types'
-import { BookOpen, Sparkles, Calendar, ArrowRight } from 'lucide-react'
-import { MosqueSkyline } from './MosqueSkyline'
 import { AnimatedFlame } from './StreakCelebration'
 
 interface QuickActionsProps {
   streakDays: number
   last7DaysActive: boolean[]
-  onNavigate: (tab: TabKey) => void
+  onNavigate?: (tab: TabKey) => void
   onScrollToChecklist: () => void
   onOpenStreak?: () => void
 }
@@ -15,133 +13,63 @@ interface QuickActionsProps {
 export const QuickActions: React.FC<QuickActionsProps> = ({
   streakDays,
   last7DaysActive,
-  onNavigate,
   onScrollToChecklist,
   onOpenStreak,
 }) => {
   const isStreakActive = streakDays > 0
 
   return (
-    <div className="space-y-4 mt-5">
-      {/* 3 Quick Action Tiles */}
-      <div className="grid grid-cols-3 gap-3">
-        <button
-          type="button"
-          onClick={() => onNavigate('quran')}
-          className="glass-card p-3.5 flex flex-col items-center justify-center gap-2 hover:bg-white transition-all cursor-pointer group shadow-sm active:scale-[0.98]"
-        >
-          <div className="w-11 h-11 rounded-2xl bg-[#0F50BD]/10 text-[#0F50BD] flex items-center justify-center group-hover:scale-105 transition-transform">
-            <BookOpen size={22} strokeWidth={2} />
-          </div>
-          <span className="text-xs font-bold text-[#101828]">Quran</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigate('tasbih')}
-          className="glass-card p-3.5 flex flex-col items-center justify-center gap-2 hover:bg-white transition-all cursor-pointer group shadow-sm active:scale-[0.98]"
-        >
-          <div className="w-11 h-11 rounded-2xl bg-[#0F50BD]/10 text-[#0F50BD] flex items-center justify-center group-hover:scale-105 transition-transform">
-            <Sparkles size={22} strokeWidth={2} />
-          </div>
-          <span className="text-xs font-bold text-[#101828]">Tasbih</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigate('kalender')}
-          className="glass-card p-3.5 flex flex-col items-center justify-center gap-2 hover:bg-white transition-all cursor-pointer group shadow-sm active:scale-[0.98]"
-        >
-          <div className="w-11 h-11 rounded-2xl bg-[#0F50BD]/10 text-[#0F50BD] flex items-center justify-center group-hover:scale-105 transition-transform">
-            <Calendar size={22} strokeWidth={2} />
-          </div>
-          <span className="text-xs font-bold text-[#101828]">Kalender</span>
-        </button>
+    <button
+      type="button"
+      onClick={() => (isStreakActive && onOpenStreak ? onOpenStreak() : onScrollToChecklist())}
+      className="w-full glass-card px-3.5 py-3 flex items-center gap-3 text-left cursor-pointer hover:border-[#CBD5E1] active:scale-[0.99] transition-all"
+      aria-label={
+        isStreakActive
+          ? `Streak istiqamah ${streakDays} hari beruntun — ketuk untuk melihat detail`
+          : 'Mulai streak hari ini — ketuk menuju checklist amal'
+      }
+    >
+      <div
+        className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+          isStreakActive ? 'bg-[#FEF3C7]' : 'bg-[#F1F5F9]'
+        }`}
+      >
+        <AnimatedFlame active={isStreakActive} size={23} showEmbers={isStreakActive} />
       </div>
 
-      {/* Tracker Call-to-Action Banner */}
-      <button
-        type="button"
-        onClick={onScrollToChecklist}
-        className="w-full relative overflow-hidden bg-gradient-to-r from-[#0F50BD] to-[#1941B5] text-white p-4 rounded-2xl flex items-center gap-3.5 text-left shadow-[0_6px_20px_rgba(25,65,181,0.18)] cursor-pointer group active:scale-[0.99] transition-all"
-      >
-        <div className="absolute right-0 bottom-0 pointer-events-none opacity-20 w-48 h-auto">
-          <MosqueSkyline className="w-full h-auto" />
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-bold text-[#101828] leading-tight">
+          {isStreakActive ? `${streakDays} hari beruntun` : 'Mulai hari ini'}
         </div>
+        <div className="text-xs text-[#475467] mt-0.5 leading-tight">
+          {isStreakActive ? 'Istiqamah tercatat' : 'Centang 1 amal untuk mulai'}
+        </div>
+      </div>
 
-        <div className="w-10 h-10 rounded-full bg-white/20 border border-white/30 backdrop-blur-sm flex items-center justify-center text-[#F59E0B] shrink-0">
-          <Sparkles size={20} fill="currentColor" />
-        </div>
-
-        <div className="flex-1 relative z-10">
-          <div className="text-[14px] font-bold leading-tight">Catat sholatmu setiap hari</div>
-          <div className="text-[12px] text-white/80 mt-0.5">Centang checklist amal hari ini di bawah</div>
-        </div>
-
-        <div className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center text-white shrink-0 group-hover:translate-x-1 transition-transform">
-          <ArrowRight size={16} strokeWidth={2.5} />
-        </div>
-      </button>
-
-      {/* Animated Streak Card — tap to view celebration when active, or jump to checklist when 0 */}
-      <button
-        type="button"
-        onClick={() => (isStreakActive && onOpenStreak ? onOpenStreak() : onScrollToChecklist())}
-        className={`w-full glass-card p-4 flex items-center gap-3.5 text-left cursor-pointer active:scale-[0.99] transition-all ${
-          isStreakActive ? 'hover:bg-white border-[#F59E0B]/20' : 'hover:bg-white'
-        }`}
-        aria-label={
-          isStreakActive
-            ? `Streak konsistensi ${streakDays} hari beruntun — ketuk untuk melihat detail streak`
-            : 'Mulai streak hari ini — ketuk menuju checklist amal'
-        }
-      >
-        <div
-          className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
-            isStreakActive
-              ? 'bg-gradient-to-br from-[#FEF3C7] to-[#F59E0B]/20 ring-1 ring-[#F59E0B]/25'
-              : 'bg-black/[0.05]'
-          }`}
-        >
-          <AnimatedFlame active={isStreakActive} size={26} showEmbers={isStreakActive} />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="text-[15px] font-bold text-[#101828] leading-tight">
-            {isStreakActive ? `${streakDays} hari beruntun` : 'Mulai hari ini'}
-          </div>
-          <div className="text-[12px] text-[#525252] mt-0.5 truncate">
-            {isStreakActive
-              ? 'Checklist amal tercatat konsisten'
-              : 'Centang minimal 1 amal untuk mulai streak'}
-          </div>
-        </div>
-
-        {/* 7 dots for the last 7 real days */}
-        <div className="flex items-center gap-1.5 shrink-0" aria-label="7 hari terakhir">
-          {last7DaysActive.map((active, idx) => {
-            const isTodayDot = idx === last7DaysActive.length - 1
-            return (
-              <span key={idx} className="relative inline-flex items-center justify-center w-2.5 h-2.5">
-                {active && isTodayDot && (
-                  <span className="streak-dot-pulse absolute inset-0 rounded-full bg-[#0F50BD]" />
-                )}
-                <span
-                  className={`relative w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                    active
-                      ? isTodayDot
-                        ? 'bg-gradient-to-br from-[#0F50BD] to-[#14B8A6] ring-2 ring-[#0F50BD]/25'
-                        : 'bg-[#0F50BD]'
-                      : isTodayDot
-                      ? 'bg-black/15 ring-2 ring-[#0F50BD]/20'
-                      : 'bg-black/10'
-                  }`}
-                />
-              </span>
-            )
-          })}
-        </div>
-      </button>
-    </div>
+      {/* 7-day consistency dots */}
+      <div className="flex items-center gap-1.5 shrink-0" aria-label="7 hari terakhir">
+        {last7DaysActive.map((active, idx) => {
+          const isTodayDot = idx === last7DaysActive.length - 1
+          return (
+            <span key={idx} className="relative inline-flex items-center justify-center w-2.5 h-2.5">
+              {active && isTodayDot && (
+                <span className="streak-dot-pulse absolute inset-0 rounded-full bg-[#0F50BD]" />
+              )}
+              <span
+                className={`relative w-2.5 h-2.5 rounded-full transition-colors ${
+                  active
+                    ? isTodayDot
+                      ? 'bg-[#0F50BD] ring-2 ring-[#0F50BD]/25'
+                      : 'bg-[#0F50BD]'
+                    : isTodayDot
+                    ? 'bg-[#CBD5E1] ring-2 ring-[#0F50BD]/20'
+                    : 'bg-[#E2E8F0]'
+                }`}
+              />
+            </span>
+          )
+        })}
+      </div>
+    </button>
   )
 }

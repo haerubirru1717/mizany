@@ -94,7 +94,7 @@ const SPARKS: { x: string; y: string; color: string; size: string }[] = [
   { x: '28px', y: '-50px', color: '#F59E0B', size: 'w-2 h-2' },
 ]
 
-const DAY_SHORTS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
+const DAY_SHORTS = ['Ahd', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
 
 function getLast7DayLabels(): string[] {
   const labels: string[] = []
@@ -127,7 +127,7 @@ export const StreakCelebration: React.FC<StreakCelebrationProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#101828]/45 backdrop-blur-[4px] p-5"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#101828]/45 p-5"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -135,27 +135,22 @@ export const StreakCelebration: React.FC<StreakCelebrationProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-[340px] bg-white rounded-[28px] p-6 text-center shadow-[0_20px_50px_rgba(16,24,40,0.22)] relative overflow-hidden view-enter"
+        className="w-full max-w-[340px] bg-white rounded-[24px] p-6 text-center shadow-floating relative overflow-hidden view-enter"
       >
-        {/* Subtle warm ambient tint at top */}
-        <div className="absolute -top-16 inset-x-0 h-40 bg-gradient-to-b from-[#F59E0B]/15 to-transparent pointer-events-none" />
-
         {/* Close button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-xl bg-black/[0.05] text-[#525252] hover:text-[#101828] flex items-center justify-center cursor-pointer transition-colors"
+          className="absolute top-4 right-4 w-9 h-9 rounded-xl bg-[#F1F5F9] text-[#475467] hover:text-[#101828] flex items-center justify-center cursor-pointer transition-colors"
           aria-label="Tutup"
         >
           <X size={16} />
         </button>
 
-        {/* Igniting Flame Emblem with burst ring & sparkles */}
-        <div className="relative mx-auto mt-2 w-24 h-24 flex items-center justify-center">
-          {/* Expanding ring wave */}
-          <span className="streak-ring-burst pointer-events-none absolute inset-1 rounded-full border-2 border-[#F59E0B]/50 opacity-0" />
+        {/* Igniting Flame Emblem */}
+        <div className="relative mx-auto mt-1 w-24 h-24 flex items-center justify-center">
+          <span className="streak-ring-burst pointer-events-none absolute inset-1 rounded-full border-2 border-[#F59E0B]/45 opacity-0" />
 
-          {/* Radiating subtle sparkles */}
           {SPARKS.map((sp, i) => (
             <span
               key={i}
@@ -170,9 +165,8 @@ export const StreakCelebration: React.FC<StreakCelebrationProps> = ({
             />
           ))}
 
-          {/* Soft amber medallion */}
-          <div className="streak-ignite w-20 h-20 rounded-[24px] bg-gradient-to-br from-[#FEF3C7] to-[#FDE68A]/70 border border-[#F59E0B]/25 shadow-[0_8px_24px_rgba(245,158,11,0.22)] flex items-center justify-center">
-            <AnimatedFlame active size={52} showEmbers />
+          <div className="streak-ignite w-20 h-20 rounded-[22px] bg-[#FEF3C7] border border-[#FDE68A] flex items-center justify-center">
+            <AnimatedFlame active size={50} showEmbers />
           </div>
         </div>
 
@@ -182,25 +176,25 @@ export const StreakCelebration: React.FC<StreakCelebrationProps> = ({
             <span className="text-4xl font-extrabold text-[#101828] tabular-nums leading-none">
               {streakDays}
             </span>
-            <span className="text-base font-bold text-[#F59E0B]">hari beruntun</span>
+            <span className="text-base font-bold text-[#B45309]">hari beruntun</span>
           </div>
-          <p className="text-xs font-medium text-[#525252] mt-1.5 leading-relaxed">
+          <p className="text-xs font-medium text-[#475467] mt-2 leading-relaxed">
             {last7DaysActive[last7DaysActive.length - 1]
               ? 'MasyaAllah, amal hari ini sudah tercatat. Amalan terbaik adalah yang konsisten meski sedikit.'
               : 'Jangan putus rantai kebaikanmu — centang minimal 1 amal hari ini untuk menjaga streak.'}
           </p>
         </div>
 
-        {/* 7-day consistency strip */}
-        <div className="mt-5 p-3 rounded-2xl bg-[#F7F9FF] border border-[#0F50BD]/10">
+        {/* Flat 7-day consistency strip (no nested card) */}
+        <div className="mt-5 py-3.5 border-y border-[#EEF2F6]">
           <div className="grid grid-cols-7 gap-1.5">
             {last7DaysActive.map((active, idx) => {
               const isToday = idx === last7DaysActive.length - 1
               return (
                 <div key={idx} className="flex flex-col items-center gap-1.5">
                   <span
-                    className={`text-[10px] font-semibold ${
-                      isToday ? 'text-[#0F50BD] font-bold' : 'text-[#525252]/75'
+                    className={`text-[11px] font-semibold ${
+                      isToday ? 'text-[#0F50BD] font-bold' : 'text-[#475467]'
                     }`}
                   >
                     {dayLabels[idx]}
@@ -209,11 +203,11 @@ export const StreakCelebration: React.FC<StreakCelebrationProps> = ({
                     className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
                       active
                         ? isToday
-                          ? 'bg-gradient-to-br from-[#0F50BD] to-[#14B8A6] text-white shadow-[0_3px_10px_rgba(15,80,189,0.3)] streak-check-pop'
+                          ? 'bg-[#0F50BD] text-white streak-check-pop'
                           : 'bg-[#0F50BD] text-white'
                         : isToday
-                        ? 'border-2 border-dashed border-[#0F50BD]/40 bg-white'
-                        : 'bg-black/[0.07]'
+                        ? 'border-2 border-dashed border-[#0F50BD]/50 bg-white'
+                        : 'bg-[#EEF2F6]'
                     }`}
                   >
                     {active && <Check size={13} strokeWidth={3.2} />}
@@ -228,7 +222,7 @@ export const StreakCelebration: React.FC<StreakCelebrationProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="w-full mt-5 py-3 px-5 rounded-full bg-[#0F50BD] text-white text-sm font-bold hover:bg-[#1941B5] shadow-[0_6px_18px_rgba(15,80,189,0.28)] active:scale-[0.98] transition-all cursor-pointer"
+          className="w-full min-h-[44px] mt-5 py-3 px-5 rounded-xl bg-[#0F50BD] text-white text-sm font-bold hover:bg-[#1941B5] active:scale-[0.98] transition-all cursor-pointer"
         >
           Alhamdulillah
         </button>

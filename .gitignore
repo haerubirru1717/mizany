@@ -27,3 +27,8 @@ dist-ssr
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Local agent tooling & personal Impeccable consent
+.agent/
+.agents/
+.impeccable/config.local.json

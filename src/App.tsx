@@ -72,10 +72,10 @@ function inferAmalIcon(name: string, type: CustomAmalType): string {
 }
 
 export default function App() {
-  const todayIso = getLocalIsoDate(0)
+  const [todayIso, setTodayIso] = useState<string>(() => getLocalIsoDate(0))
 
   const [activeTab, setActiveTab] = useState<TabKey>('beranda')
-  const [selectedChecklistDate, setSelectedChecklistDate] = useState<string>(todayIso)
+  const [selectedChecklistDate, setSelectedChecklistDate] = useState<string>(() => getLocalIsoDate(0))
   const [city, setCity] = useState<string>('Kota Tangerang')
   const [cityMode, setCityMode] = useState<'auto' | 'manual'>('auto')
   const [isLocatingCity, setIsLocatingCity] = useState<boolean>(false)
@@ -88,6 +88,8 @@ export default function App() {
   const [dailyLogs, setDailyLogs] = useState<DailyLogsByDate>({})
   const [showOnboarding, setShowOnboarding] = useState<boolean>(false)
   const [prayerSchedule, setPrayerSchedule] = useState<PrayerSchedule | null>(null)
+  const [prayerLoadFailed, setPrayerLoadFailed] = useState<boolean>(false)
+  const [prayerRetryTick, setPrayerRetryTick] = useState<number>(0)
   const [hijriData, setHijriData] = useState<HijriHeroData | null>(null)
 
   // PWA Install state
@@ -101,6 +103,7 @@ export default function App() {
   const [showStreakModal, setShowStreakModal] = useState<boolean>(false)
 
   const hasAutoLocatedRef = useRef<boolean>(false)
+  const prevTodayIsoRef = useRef<string>(todayIso)
 
   // Initialize persisted settings & real daily logs from localStorage
   useEffect(() => {
@@ -214,12 +217,20 @@ export default function App() {
       if (isRefreshing) return
       isRefreshing = true
       lastFetchAttempt = Date.now()
+      setPrayerLoadFailed(false)
       loadCityPrayerData(city)
         .then((data) => {
-          if (isMounted && data) {
+          if (!isMounted) return
+          if (data) {
             cachedData = data
+            setPrayerLoadFailed(false)
             setPrayerSchedule(computePrayerSchedule(data, new Date()))
+          } else if (!cachedData) {
+            setPrayerLoadFailed(true)
           }
+        })
+        .catch(() => {
+          if (isMounted && !cachedData) setPrayerLoadFailed(true)
         })
         .finally(() => {
           isRefreshing = false
@@ -230,6 +241,14 @@ export default function App() {
 
     const interval = setInterval(() => {
       const now = new Date()
+      const currentLocalIso = getLocalIsoDate(0, now)
+      if (currentLocalIso !== prevTodayIsoRef.current) {
+        const oldToday = prevTodayIsoRef.current
+        prevTodayIsoRef.current = currentLocalIso
+        setTodayIso(currentLocalIso)
+        setSelectedChecklistDate((prev) => (prev === oldToday ? currentLocalIso : prev))
+      }
+
       if (!cachedData) {
         if (Date.now() - lastFetchAttempt >= 15000) {
           refreshCityData()
@@ -246,7 +265,7 @@ export default function App() {
       isMounted = false
       clearInterval(interval)
     }
-  }, [city])
+  }, [city, prayerRetryTick])
 
   // Fetch official Kemenag RI (Neo MABIMS) Hijri calendar data
   useEffect(() => {
@@ -682,10 +701,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent relative">
-      {/* Soft blurred background ambient lights */}
-      <div className="fixed -top-20 -left-20 w-80 h-80 rounded-full bg-[#8BA0F3]/15 blur-[80px] pointer-events-none" />
-
+    <div className="min-h-screen bg-[#F4F7FB] relative">
       {/* Onboarding Overlay */}
       {showOnboarding && <Onboarding onComplete={handleCompleteOnboarding} />}
 
@@ -710,15 +726,15 @@ export default function App() {
       />
 
       {/* Full-Screen Tasbih Canvas (mounted outside .view-enter transform so fixed inset-0 covers 100% viewport) */}
-      {activeTab === 'tasbih' && <TasbihView onBack={() => setActiveTab('beranda')} />}
+      {!showOnboarding && activeTab === 'tasbih' && <TasbihView onBack={() => setActiveTab('beranda')} />}
 
       {/* Main Container */}
-      {activeTab !== 'tasbih' && (
-        <main className="max-w-md mx-auto min-h-screen px-4 pt-2 sm:pt-4 pb-20 relative z-10">
+      {!showOnboarding && activeTab !== 'tasbih' && (
+        <main className="max-w-md mx-auto min-h-screen px-4 pt-[calc(12px+env(safe-area-inset-top))] pb-28 relative z-10">
           <div key={activeTab} className="view-enter">
             {/* VIEW: BERANDA */}
             {activeTab === 'beranda' && (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <HeroPrayer
                   city={city}
                   gregorianDate={prayerSchedule?.gregorianDate}
@@ -731,6 +747,8 @@ export default function App() {
                   nextPrayerTime={prayerSchedule?.nextPrayer?.time}
                   remainingTime={prayerSchedule?.nextPrayer?.remaining}
                   hijriData={hijriData}
+                  prayerLoadFailed={prayerLoadFailed}
+                  onRetryPrayer={() => setPrayerRetryTick((t) => t + 1)}
                   onOpenPrayerDetail={() => setActiveTab('prayer')}
                   onOpenCalendar={() => setActiveTab('kalender')}
                 />
@@ -738,7 +756,6 @@ export default function App() {
                 <QuickActions
                   streakDays={streakDays}
                   last7DaysActive={last7DaysActive}
-                  onNavigate={(tab) => setActiveTab(tab)}
                   onScrollToChecklist={() => scrollToSection('checklist-section')}
                   onOpenStreak={() => setShowStreakModal(true)}
                 />
@@ -772,6 +789,7 @@ export default function App() {
                 hijriDateLabel={hijriData?.formattedDate}
                 linkedAmalName={linkedQuranAmal?.name}
                 onChangePagesToday={handleChangeQuranPages}
+                onChangeDailyTarget={handleChangeTilawahTarget}
                 onAddToChecklist={handleAddQuranToChecklist}
               />
             )}
@@ -823,8 +841,8 @@ export default function App() {
         </main>
       )}
 
-      {/* Floating Bottom Nav (hidden in full-screen Tasbih mode to avoid accidental taps) */}
-      {activeTab !== 'tasbih' && (
+      {/* Bottom Nav (hidden during Onboarding and full-screen Tasbih mode) */}
+      {!showOnboarding && activeTab !== 'tasbih' && (
         <BottomNav
           activeTab={activeTab === 'prayer' ? 'beranda' : activeTab}
           onSelectTab={(tab) => setActiveTab(tab)}

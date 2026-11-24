@@ -87,6 +87,7 @@ export const AturView: React.FC<AturViewProps> = ({
   const [allCities, setAllCities] = useState<IndonesianCityOption[]>(POPULAR_CITIES)
   const [cityQuery, setCityQuery] = useState('')
   const [showCitySearch, setShowCitySearch] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
@@ -113,105 +114,118 @@ export const AturView: React.FC<AturViewProps> = ({
     /iPad|iPhone|iPod/.test(navigator.userAgent) &&
     !isPwaInstalled
 
+  const linkedJuzAmal = customAmalItems.find(
+    (item) =>
+      item.type === 'target' &&
+      /qur|tilawah|tadarus|mushaf|ngaji|mengaji/i.test(item.name) &&
+      /juz/i.test(item.unit || '')
+  )
+  const tilawahStep = linkedJuzAmal ? 20 : 1
+
   return (
-    <div className="space-y-5 pb-24">
+    <div className="space-y-4 pb-28">
       {/* Title */}
-      <div>
-        <h1 className="text-2xl font-bold text-[#101828]">Pengaturan</h1>
-        <p className="text-xs text-[#525252] mt-0.5">Sesuaikan Mizany dengan kebiasaan ibadahmu</p>
+      <div className="px-0.5">
+        <h1 className="text-xl font-extrabold text-[#101828] tracking-tight">Pengaturan</h1>
+        <p className="text-xs text-[#475467] mt-0.5">Sesuaikan Mizany dengan kebiasaan ibadahmu</p>
       </div>
 
-      {/* 1. Lokasi & Kota Jadwal Sholat (GPS Otomatis + Pencarian 518 Wilayah Kemenag) */}
-      <div className="glass-card p-4 sm:p-5 space-y-3">
+      {/* 1. Lokasi & Kota Jadwal Sholat (flat, zero nested cards) */}
+      <section className="glass-card p-4 sm:p-5 space-y-3.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-bold text-[#525252] uppercase tracking-wider">
-            Lokasi Jadwal Sholat
-          </span>
+          <h2 className="text-sm font-bold text-[#101828]">Lokasi Jadwal Sholat</h2>
           <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+            className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
               cityMode === 'auto'
-                ? 'bg-[#14B8A6]/15 text-[#0F766E]'
-                : 'bg-[#0F50BD]/10 text-[#0F50BD]'
+                ? 'bg-[#F0FDFA] text-[#0F766E]'
+                : 'bg-[#EFF6FF] text-[#0F50BD]'
             }`}
           >
-            {cityMode === 'auto' ? 'Otomatis (GPS)' : 'Manual'}
+            {cityMode === 'auto' ? 'Otomatis' : 'Manual'}
           </span>
         </div>
 
-        {/* Active City Display */}
-        <div className="p-3 rounded-xl bg-[#F7F9FF] border border-[#0F50BD]/15 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-[#0F50BD]/10 text-[#0F50BD] flex items-center justify-center shrink-0">
-              <MapPin size={18} />
+        {/* Active City Row (flat, no inner card border) */}
+        <div className="flex items-center justify-between gap-2.5 pt-2 border-t border-[#EEF2F6]">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] text-[#0F50BD] flex items-center justify-center shrink-0">
+              <MapPin size={18} aria-hidden="true" />
             </div>
             <div className="min-w-0">
               <div className="text-sm font-bold text-[#101828] truncate">{city}</div>
-              <div className="text-[11px] text-[#525252] truncate">
-                Data resmi Bimas Islam Kemenag RI
-              </div>
+              <div className="text-xs text-[#475467] truncate">Bimas Islam Kemenag RI</div>
             </div>
           </div>
 
           <button
             type="button"
             onClick={() => setShowCitySearch((v) => !v)}
-            className="px-2.5 py-1.5 rounded-lg border border-black/10 bg-white text-[11px] font-bold text-[#0F50BD] hover:bg-blue-50 cursor-pointer shrink-0 transition-colors"
+            className="min-h-[38px] px-3 py-1.5 rounded-xl border border-[#CBD5E1] bg-white text-xs font-bold text-[#0F50BD] hover:bg-[#EFF6FF] cursor-pointer shrink-0 transition-colors"
           >
             {showCitySearch ? 'Tutup' : 'Ganti'}
           </button>
         </div>
 
-        {/* Auto-detect GPS button */}
+        {/* GPS trigger: secondary when auto is active, primary when manual */}
         <button
           type="button"
           onClick={onDetectLocation}
           disabled={isLocatingCity}
-          className="w-full py-2.5 px-4 rounded-xl bg-[#0F50BD] text-white text-xs font-bold flex items-center justify-center gap-2 hover:bg-[#1941B5] active:scale-[0.99] disabled:opacity-65 transition-all cursor-pointer shadow-sm"
+          className={`w-full min-h-[42px] py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-65 transition-colors cursor-pointer ${
+            cityMode === 'auto'
+              ? 'border border-[#CBD5E1] bg-[#F8FAFC] text-[#101828] hover:bg-[#F1F5F9]'
+              : 'bg-[#0F50BD] text-white hover:bg-[#1941B5]'
+          }`}
         >
           {isLocatingCity ? (
             <>
-              <Loader2 size={15} className="animate-spin" />
-              <span>Mendeteksi lokasi perangkat...</span>
+              <Loader2 size={15} className="animate-spin" aria-hidden="true" />
+              <span>Mendeteksi lokasi...</span>
             </>
           ) : (
             <>
-              <LocateFixed size={15} />
-              <span>Gunakan Lokasi Otomatis (GPS)</span>
+              <LocateFixed size={15} aria-hidden="true" />
+              <span>
+                {cityMode === 'auto'
+                  ? 'Perbarui Lokasi Otomatis (GPS)'
+                  : 'Gunakan Lokasi Otomatis (GPS)'}
+              </span>
             </>
           )}
         </button>
 
         {locationMessage && !locationError && (
-          <p className="text-[11.5px] font-medium text-[#0F766E] bg-teal-50 border border-teal-200/70 rounded-xl px-3 py-2">
+          <p className="text-xs font-medium text-[#0F766E] bg-[#F0FDFA] border border-[#CCFBF1] rounded-xl px-3 py-2">
             {locationMessage}
           </p>
         )}
 
         {locationError && (
-          <p className="text-[11.5px] font-medium text-red-600 bg-red-50 border border-red-200/70 rounded-xl px-3 py-2">
+          <p className="text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
             {locationError}
           </p>
         )}
 
-        {/* Expandable Search across all 518 Indonesian Kab/Kota */}
+        {/* Expandable Search across 518 Indonesian Kab/Kota */}
         {showCitySearch && (
-          <div className="pt-2 border-t border-black/[0.06] space-y-2">
+          <div className="pt-3 border-t border-[#EEF2F6] space-y-2.5">
             <div className="relative">
               <Search
                 size={15}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#525252]/70 pointer-events-none"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475467] pointer-events-none"
+                aria-hidden="true"
               />
               <input
                 type="text"
                 value={cityQuery}
                 onChange={(e) => setCityQuery(e.target.value)}
-                placeholder="Cari dari 518 kota/kabupaten Indonesia..."
+                placeholder="Cari dari 518 kota/kabupaten..."
                 aria-label="Cari kota atau kabupaten Indonesia"
-                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-black/15 bg-white text-xs font-medium text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#0F50BD]/30 focus:border-[#0F50BD]"
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#CBD5E1] bg-white text-xs font-medium text-[#101828] focus:outline-none focus:border-[#0F50BD]"
               />
             </div>
 
-            <div className="max-h-48 overflow-y-auto rounded-xl border border-black/[0.07] bg-white divide-y divide-black/[0.04]">
+            <div className="max-h-48 overflow-y-auto divide-y divide-[#EEF2F6]">
               {filteredCities.length > 0 ? (
                 filteredCities.map((c) => {
                   const selected = c.label.toLowerCase() === city.toLowerCase()
@@ -224,10 +238,10 @@ export const AturView: React.FC<AturViewProps> = ({
                         setShowCitySearch(false)
                         setCityQuery('')
                       }}
-                      className={`w-full px-3 py-2.5 text-left text-xs flex items-center justify-between gap-2 cursor-pointer transition-colors ${
+                      className={`w-full px-2 py-2.5 text-left text-xs flex items-center justify-between gap-2 cursor-pointer transition-colors rounded-lg ${
                         selected
-                          ? 'bg-[#0F50BD]/10 text-[#0F50BD] font-bold'
-                          : 'text-[#101828] hover:bg-black/[0.03] font-medium'
+                          ? 'bg-[#EFF6FF] text-[#0F50BD] font-bold'
+                          : 'text-[#101828] hover:bg-[#F8FAFC] font-medium'
                       }`}
                     >
                       <span className="truncate">{c.label}</span>
@@ -236,173 +250,209 @@ export const AturView: React.FC<AturViewProps> = ({
                   )
                 })
               ) : (
-                <div className="py-4 text-center text-xs text-[#525252]">
-                  Kota "{cityQuery}" tidak ditemukan
+                <div className="py-4 text-center text-xs text-[#475467]">
+                  Kota &ldquo;{cityQuery}&rdquo; tidak ditemukan
                 </div>
               )}
             </div>
           </div>
         )}
-      </div>
+      </section>
 
-      {/* 2. Pasang Aplikasi (PWA) — tampil jika belum terpasang */}
+      {/* 2. Pasang Aplikasi (PWA) */}
       {!isPwaInstalled && (canInstallPwa || isIosBrowser) && (
-        <div className="glass-card p-4 sm:p-5 border-[#0F50BD]/20 bg-gradient-to-br from-[#F7F9FF] to-white">
+        <section className="glass-card p-4 sm:p-5">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#0F50BD]/10 text-[#0F50BD] flex items-center justify-center shrink-0">
-              <Smartphone size={20} />
+            <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] text-[#0F50BD] flex items-center justify-center shrink-0">
+              <Smartphone size={20} aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-bold text-[#101828]">Pasang Mizany di HP</h3>
-              <p className="text-[11.5px] text-[#525252] mt-0.5 leading-relaxed">
+              <h2 className="text-sm font-bold text-[#101828]">Pasang Mizany di HP</h2>
+              <p className="text-xs text-[#475467] mt-0.5 leading-relaxed">
                 {canInstallPwa
-                  ? 'Akses cepat dari layar utama layar penuh dan tetap bisa dibuka saat offline.'
-                  : 'Di Safari iPhone/iPad: ketuk tombol Bagikan (Share) lalu pilih "Tambahkan ke Layar Utama".'}
+                  ? 'Akses cepat layar penuh dari beranda HP dan tetap terbuka saat offline.'
+                  : 'Di Safari iPhone/iPad: ketuk Bagikan lalu pilih "Tambahkan ke Layar Utama".'}
               </p>
               {canInstallPwa && (
                 <button
                   type="button"
                   onClick={onInstallPwa}
-                  className="mt-2.5 px-4 py-2 rounded-full bg-[#0F50BD] text-white text-xs font-bold inline-flex items-center gap-1.5 hover:bg-[#1941B5] active:scale-95 transition-all cursor-pointer shadow-sm"
+                  className="mt-3 min-h-[40px] px-4 py-2 rounded-xl bg-[#0F50BD] text-white text-xs font-bold inline-flex items-center gap-1.5 hover:bg-[#1941B5] active:scale-95 transition-all cursor-pointer"
                 >
-                  <Download size={14} />
+                  <Download size={14} aria-hidden="true" />
                   <span>Pasang Aplikasi</span>
                 </button>
               )}
             </div>
           </div>
-        </div>
+        </section>
       )}
 
       {/* 3. Target Tilawah Harian */}
-      {(() => {
-        const linkedJuzAmal = customAmalItems.find(
-          (item) =>
-            item.type === 'target' &&
-            /qur|tilawah|tadarus|mushaf|ngaji|mengaji/i.test(item.name) &&
-            /juz/i.test(item.unit || '')
-        )
-        const step = linkedJuzAmal ? 20 : 1
-        return (
-          <div className="glass-card p-4 sm:p-5">
-            <label className="text-xs font-bold text-[#525252] uppercase tracking-wider block mb-2">
-              Target Tilawah Harian
-            </label>
-            <div className="flex items-center justify-between p-2 rounded-xl bg-black/[0.03]">
-              <button
-                type="button"
-                onClick={() => onChangeTilawahTarget(Math.max(step, tilawahTarget - step))}
-                className="w-10 h-10 rounded-lg bg-white border border-black/10 flex items-center justify-center text-[#525252] hover:text-[#101828] active:scale-95 shadow-sm cursor-pointer"
-                aria-label="Kurangi target"
-              >
-                <Minus size={18} strokeWidth={2.5} />
-              </button>
+      <section className="glass-card p-4 sm:p-5 space-y-3">
+        <h2 className="text-sm font-bold text-[#101828]">Target Tilawah Harian</h2>
+        <div className="flex items-center justify-between pt-1">
+          <button
+            type="button"
+            onClick={() => onChangeTilawahTarget(Math.max(tilawahStep, tilawahTarget - tilawahStep))}
+            className="w-11 h-11 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] flex items-center justify-center text-[#334155] hover:bg-[#EEF2F6] active:scale-95 cursor-pointer"
+            aria-label="Kurangi target tilawah"
+          >
+            <Minus size={18} strokeWidth={2.5} />
+          </button>
 
-              <div className="text-center">
-                <span className="text-2xl font-extrabold text-[#0F50BD] tabular-nums">{tilawahTarget}</span>
-                <span className="text-xs text-[#525252] block font-medium">
-                  {linkedJuzAmal
-                    ? `halaman (${linkedJuzAmal.target || 1} juz · ${linkedJuzAmal.name})`
-                    : 'halaman per hari'}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => onChangeTilawahTarget(tilawahTarget + step)}
-                className="w-10 h-10 rounded-lg bg-[#0F50BD] text-white flex items-center justify-center active:scale-95 shadow-sm cursor-pointer hover:bg-[#1941B5]"
-                aria-label="Tambah target"
-              >
-                <Plus size={18} strokeWidth={2.5} />
-              </button>
-            </div>
+          <div className="text-center">
+            <span className="text-2xl font-extrabold text-[#0F50BD] tabular-nums">
+              {tilawahTarget}
+            </span>
+            <span className="text-xs text-[#475467] block font-medium mt-0.5">
+              {linkedJuzAmal
+                ? `halaman (${linkedJuzAmal.target || 1} juz · ${linkedJuzAmal.name})`
+                : 'halaman per hari'}
+            </span>
           </div>
-        )
-      })()}
 
-      {/* 4. Kelola Amal Tambahan Saya */}
-      <div className="glass-card p-4 sm:p-5">
-        <h3 className="text-xs font-bold text-[#525252] uppercase tracking-wider mb-3">
-          Amal Tambahan Saya
-        </h3>
+          <button
+            type="button"
+            onClick={() => onChangeTilawahTarget(tilawahTarget + tilawahStep)}
+            className="w-11 h-11 rounded-xl bg-[#0F50BD] text-white flex items-center justify-center active:scale-95 cursor-pointer hover:bg-[#1941B5]"
+            aria-label="Tambah target tilawah"
+          >
+            <Plus size={18} strokeWidth={2.5} />
+          </button>
+        </div>
+
+        <div className="flex items-center justify-center gap-2 pt-2 border-t border-[#EEF2F6]">
+          {[4, 10, 20].map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => onChangeTilawahTarget(preset)}
+              className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-bold tabular-nums cursor-pointer transition-colors ${
+                tilawahTarget === preset
+                  ? 'bg-[#0F50BD] text-white'
+                  : 'bg-[#F1F5F9] text-[#334155] hover:bg-[#E2E8F0]'
+              }`}
+            >
+              {preset} hal
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* 4. Kelola Amal Tambahan (flat divider rows + 2-tap delete guard) */}
+      <section className="glass-card overflow-hidden">
+        <div className="px-4 sm:px-5 pt-4 pb-3 flex items-center justify-between gap-2">
+          <h2 className="text-sm font-bold text-[#101828]">Amal Tambahan Saya</h2>
+          <span className="text-xs font-semibold text-[#475467] tabular-nums">
+            {customAmalItems.length} amal
+          </span>
+        </div>
 
         {customAmalItems.length > 0 ? (
-          <div className="space-y-2 mb-3.5">
-            {customAmalItems.map((item) => (
-              <div
-                key={item.id}
-                className="p-3 rounded-xl bg-white border border-black/[0.06] flex items-center justify-between gap-2"
-              >
-                <div className="min-w-0">
-                  <div className="text-sm font-bold text-[#101828] truncate">{item.name}</div>
-                  <div className="text-[11px] text-[#525252]">{formatAmalSubtitle(item)}</div>
+          <div className="divide-y divide-[#EEF2F6] border-t border-[#EEF2F6]">
+            {customAmalItems.map((item) => {
+              const confirming = confirmDeleteId === item.id
+              return (
+                <div
+                  key={item.id}
+                  className="px-4 sm:px-5 py-3 flex items-center justify-between gap-2"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold text-[#101828] truncate">{item.name}</div>
+                    <div className="text-xs text-[#475467]">{formatAmalSubtitle(item)}</div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {item.type === 'target' && !confirming && (
+                      <button
+                        type="button"
+                        onClick={() => onEditAmal(item)}
+                        className="w-9 h-9 rounded-xl text-[#0F50BD] hover:bg-[#EFF6FF] flex items-center justify-center cursor-pointer transition-colors"
+                        aria-label={`Ubah target ${item.name}`}
+                        title="Ubah target"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                    )}
+                    {confirming ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="min-h-[36px] px-2.5 rounded-lg bg-[#F1F5F9] text-xs font-semibold text-[#334155] cursor-pointer"
+                        >
+                          Batal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onDeleteCustomAmal(item.id)
+                            setConfirmDeleteId(null)
+                          }}
+                          className="min-h-[36px] px-2.5 rounded-lg bg-red-600 text-white text-xs font-bold cursor-pointer"
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(item.id)}
+                        className="w-9 h-9 rounded-xl text-red-700 hover:bg-red-50 flex items-center justify-center cursor-pointer transition-colors"
+                        aria-label={`Hapus ${item.name}`}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {item.type === 'target' && (
-                    <button
-                      type="button"
-                      onClick={() => onEditAmal(item)}
-                      className="w-8 h-8 rounded-lg text-[#0F50BD] hover:bg-[#0F50BD]/10 flex items-center justify-center cursor-pointer transition-colors"
-                      aria-label={`Ubah target ${item.name}`}
-                      title="Ubah target"
-                    >
-                      <Pencil size={15} />
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => onDeleteCustomAmal(item.id)}
-                    className="w-8 h-8 rounded-lg text-red-500 hover:bg-red-50 flex items-center justify-center cursor-pointer transition-colors"
-                    aria-label={`Hapus ${item.name}`}
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         ) : (
-          <p className="text-xs text-[#525252] mb-3.5">
-            Secara default hanya amalan wajib Sholat 5 waktu (dan Puasa saat Ramadan). Tambahkan amal harianmu di bawah.
+          <p className="px-4 sm:px-5 pb-3 text-xs text-[#475467] leading-relaxed">
+            Secara bawaan hanya amalan wajib Sholat 5 waktu (dan Puasa saat Ramadan). Tambahkan kebiasaan ibadahmu di bawah.
           </p>
         )}
 
-        <button
-          type="button"
-          onClick={onOpenAddAmal}
-          className="w-full py-2.5 px-4 rounded-full bg-[#0F50BD] text-white text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-[#1941B5] transition-colors cursor-pointer shadow-sm"
-        >
-          <Plus size={15} strokeWidth={2.5} />
-          <span>Tambah Amal Baru</span>
-        </button>
-      </div>
+        <div className="px-4 sm:px-5 py-3 border-t border-[#EEF2F6] bg-[#F8FAFC]">
+          <button
+            type="button"
+            onClick={onOpenAddAmal}
+            className="w-full min-h-[42px] py-2 px-4 rounded-xl bg-[#0F50BD] text-white text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-[#1941B5] transition-colors cursor-pointer"
+          >
+            <Plus size={15} strokeWidth={2.5} aria-hidden="true" />
+            <span>Tambah Amal Baru</span>
+          </button>
+        </div>
+      </section>
 
-      {/* 5. Disclaimer Kejujuran (Kunci Desain & Spesifikasi) */}
-      <div className="glass-card p-4 sm:p-5 border-blue-200/60 bg-blue-50/30">
+      {/* 5. Disclaimer Kejujuran */}
+      <section className="rounded-[18px] p-4 sm:p-5 bg-[#EFF6FF] border border-[#DBEAFE]">
         <div className="flex items-start gap-2.5">
-          <Info size={19} className="text-[#0F50BD] shrink-0 mt-0.5" />
+          <Info size={18} className="text-[#0F50BD] shrink-0 mt-0.5" aria-hidden="true" />
           <div>
-            <h3 className="text-sm font-bold text-[#101828]">Tentang Streak & Skor</h3>
-            <p className="text-xs text-[#525252] mt-1.5 leading-relaxed">
+            <h2 className="text-sm font-bold text-[#101828]">Tentang Streak &amp; Skor</h2>
+            <p className="text-xs text-[#334155] mt-1.5 leading-relaxed">
               Streak dan skor di Mizany <b>hanya alat bantu menjaga konsistensi</b> — bukan ukuran nilai amal, apalagi tanda diterimanya amal di sisi Allah. Hari yang terlewat bukan kegagalan; yang terpenting adalah niat, keikhlasan, dan kemauan untuk mulai lagi.
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* 6. Replay Onboarding */}
-      <div className="text-center pt-2">
+      {/* 6. Replay Panduan Awal */}
+      <div className="text-center pt-1">
         <button
           type="button"
           onClick={onReplayOnboarding}
-          className="text-xs font-bold text-[#0F50BD] hover:underline cursor-pointer"
+          className="min-h-[40px] px-3 py-2 text-xs font-bold text-[#0F50BD] hover:underline cursor-pointer"
         >
-          Lihat kembali intro aplikasi (Onboarding)
+          Lihat panduan awal aplikasi
         </button>
       </div>
 
-      <p className="text-[11px] text-center text-[#525252]/70 pt-2">
-        Mizany — Timbang Amal Harian · Selalu gratis, tanpa iklan
+      <p className="text-xs text-center text-[#475467] pb-2">
+        Mizany — Timbang Amal Harian · Gratis, tanpa iklan
       </p>
     </div>
   )

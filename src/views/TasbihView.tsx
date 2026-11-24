@@ -78,6 +78,9 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
   const [isPressed, setIsPressed] = useState<boolean>(false)
   const [isHolding, setIsHolding] = useState<boolean>(false)
   const [ripple, setRipple] = useState<TouchRipple | null>(null)
+  const [confirmReset, setConfirmReset] = useState<boolean>(false)
+
+  const supportsVibrate = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function'
 
   // Add custom dhikr form fields
   const [newLatin, setNewLatin] = useState('')
@@ -263,7 +266,25 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
   }
 
   const handleSurfaceKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Escape' && showControls) {
+      e.preventDefault()
+      setShowControls(false)
+      setConfirmReset(false)
+      closeSubPopovers()
+      return
+    }
     if (isDhikrOpen || showCustomTarget) return
+    if (e.key === 'm' || e.key === 'M') {
+      e.preventDefault()
+      setShowControls((prev) => {
+        if (prev) {
+          closeSubPopovers()
+          setConfirmReset(false)
+        }
+        return !prev
+      })
+      return
+    }
     if (e.key === ' ' || e.key === 'Enter') {
       e.preventDefault()
       incrementCount()
@@ -271,8 +292,14 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
   }
 
   const handleReset = () => {
+    if (count === 0 && rounds === 1) return
+    if (!confirmReset) {
+      setConfirmReset(true)
+      return
+    }
     setCount(0)
     setRounds(1)
+    setConfirmReset(false)
     if (hapticEnabled) vibrateDevice(40)
   }
 
@@ -280,6 +307,7 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
     setSelectedId(item.id)
     setCount(0)
     setRounds(1)
+    setConfirmReset(false)
     if (item.defaultTarget && item.defaultTarget >= 1) {
       setTarget(item.defaultTarget)
       setCustomTargetInput(String(item.defaultTarget))
@@ -313,6 +341,7 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
     setCustomTargetInput(String(parsedTarget))
     setCount(0)
     setRounds(1)
+    setConfirmReset(false)
     setNewLatin('')
     setNewArabic('')
     setNewMeaning('')
@@ -350,7 +379,7 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
     <div
       role="button"
       tabIndex={0}
-      aria-label={`Tasbih layar penuh ${activeDhikr.latin}, hitungan ${count} dari ${target}. Ketuk di mana saja untuk hitung, tekan dan tahan layar untuk menampilkan konfigurasi.`}
+      aria-label={`Tasbih layar penuh ${activeDhikr.latin}, hitungan ${count} dari ${target}. Ketuk di mana saja untuk hitung, tekan dan tahan layar (atau tombol M) untuk konfigurasi.`}
       onPointerDown={handleSurfacePointerDown}
       onPointerMove={handleSurfacePointerMove}
       onPointerUp={handleSurfacePointerUp}
@@ -363,18 +392,14 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
       onContextMenu={(e) => e.preventDefault()}
       onKeyDown={handleSurfaceKeyDown}
       style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
-      className="fixed inset-0 z-30 flex flex-col justify-between overflow-hidden select-none touch-none cursor-pointer bg-gradient-to-b from-[#F4F7FF] via-white to-[#F7FAFF]"
+      className="fixed inset-0 z-30 flex flex-col justify-between overflow-hidden select-none touch-none cursor-pointer bg-[#F4F7FB]"
     >
-      {/* Subtle ambient Tazkirah glow */}
-      <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-[#8BA0F3]/15 blur-[90px]" />
-      <div className="pointer-events-none absolute -bottom-24 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full bg-[#14B8A6]/10 blur-[80px]" />
-
       {/* Touch-point ripple feedback */}
       {ripple && (
         <span
           key={ripple.id}
           style={{ left: ripple.x, top: ripple.y }}
-          className="tasbih-touch-ripple pointer-events-none fixed z-10 w-28 h-28 rounded-full border-2 border-[#0F50BD]/30 bg-[#0F50BD]/10"
+          className="tasbih-touch-ripple pointer-events-none fixed z-10 w-28 h-28 rounded-full border-2 border-[#0F50BD]/25 bg-[#0F50BD]/8"
         />
       )}
 
@@ -389,14 +414,14 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
               e.stopPropagation()
               onBack()
             }}
-            className="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-[#101828] hover:bg-white active:scale-95 transition-all cursor-pointer shadow-sm"
+            className="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-[#101828] hover:border-[#CBD5E1] active:scale-95 transition-all cursor-pointer"
             aria-label="Kembali ke Beranda"
           >
             <ArrowLeft size={19} />
           </button>
 
           <div className="flex items-center gap-2">
-            <div className="pointer-events-none px-3 py-1.5 rounded-full bg-[#0F50BD]/10 border border-[#0F50BD]/15 text-xs font-bold text-[#0F50BD] tabular-nums">
+            <div className="pointer-events-none px-3 py-1.5 rounded-full bg-[#EFF6FF] border border-[#DBEAFE] text-xs font-bold text-[#0F50BD] tabular-nums">
               Putaran ke-{rounds}
             </div>
 
@@ -407,12 +432,13 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
                 onClick={(e) => {
                   e.stopPropagation()
                   setShowControls(false)
+                  setConfirmReset(false)
                   closeSubPopovers()
                 }}
-                className="px-2.5 py-1.5 rounded-full glass-card text-[11px] font-bold text-[#525252] hover:text-[#101828] inline-flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
+                className="min-h-[36px] px-3 py-1.5 rounded-full glass-card text-xs font-bold text-[#334155] hover:text-[#101828] inline-flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
                 aria-label="Sembunyikan konfigurasi"
               >
-                <EyeOff size={13} />
+                <EyeOff size={14} aria-hidden="true" />
                 <span>Sembunyikan</span>
               </button>
             )}
@@ -422,7 +448,7 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
         {/* Minimalist Top Config (revealed in-place via press & hold) */}
         {showControls && (
           <div {...stopSurfaceEvents} className="space-y-2.5 view-enter">
-            {/* Selector Lafadz Dzikir (same minimalist glass-card dropdown as before) */}
+            {/* Selector Lafadz Dzikir */}
             <div className="relative max-w-sm mx-auto">
               <button
                 type="button"
@@ -431,18 +457,18 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
                   setShowAddForm(false)
                   setShowCustomTarget(false)
                 }}
-                className="w-full glass-card px-4 py-3 flex items-center justify-between text-left cursor-pointer hover:bg-white transition-all shadow-sm"
+                className="w-full glass-card px-4 py-3 flex items-center justify-between text-left cursor-pointer hover:border-[#CBD5E1] transition-all"
               >
                 <div className="min-w-0 pr-2">
                   {activeDhikr.arabic && (
-                    <div className="text-base font-bold text-[#0F50BD] leading-snug">
+                    <div className="font-arabic text-lg font-bold text-[#0F50BD] leading-snug">
                       {activeDhikr.arabic}
                     </div>
                   )}
-                  <div className="text-xs font-semibold text-[#101828] mt-0.5 truncate">
+                  <div className="text-xs font-bold text-[#101828] mt-0.5 truncate">
                     {activeDhikr.latin}
                   </div>
-                  <div className="text-[11px] text-[#525252] truncate">{activeDhikr.meaning}</div>
+                  <div className="text-xs text-[#475467] truncate">{activeDhikr.meaning}</div>
                 </div>
                 <ChevronDown
                   size={18}
@@ -453,7 +479,7 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
               </button>
 
               {isDhikrOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 z-30 glass-card p-2.5 shadow-floating space-y-1 bg-white/95 backdrop-blur-xl text-left max-h-[320px] overflow-y-auto touch-pan-y select-text">
+                <div className="absolute top-full left-0 right-0 mt-2 z-30 bg-white border border-[#E2E8F0] rounded-[18px] p-2.5 shadow-floating space-y-1 text-left max-h-[320px] overflow-y-auto touch-pan-y select-text">
                   {!showAddForm ? (
                     <>
                       {allDhikr.map((item) => (
@@ -467,30 +493,32 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
                           }}
                           className={`w-full p-2.5 rounded-xl flex items-center justify-between gap-2 cursor-pointer transition-colors ${
                             item.id === activeDhikr.id
-                              ? 'bg-[#0F50BD]/10 text-[#0F50BD]'
-                              : 'hover:bg-black/5'
+                              ? 'bg-[#EFF6FF] text-[#0F50BD]'
+                              : 'hover:bg-[#F8FAFC]'
                           }`}
                         >
                           <div className="min-w-0">
                             <div className="text-sm font-bold text-[#101828] truncate flex items-center gap-1.5">
                               <span>{item.latin}</span>
                               {item.isCustom && (
-                                <span className="text-[9.5px] font-semibold px-1.5 py-0.5 rounded bg-[#0F50BD]/10 text-[#0F50BD]">
-                                  Custom
+                                <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-[#EFF6FF] text-[#0F50BD]">
+                                  Khusus
                                 </span>
                               )}
                             </div>
-                            <div className="text-[11px] text-[#525252] truncate">{item.meaning}</div>
+                            <div className="text-xs text-[#475467] truncate">{item.meaning}</div>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
                             {item.arabic && (
-                              <span className="text-sm font-bold text-[#0F50BD]">{item.arabic}</span>
+                              <span className="font-arabic text-base font-bold text-[#0F50BD]">
+                                {item.arabic}
+                              </span>
                             )}
                             {item.isCustom && (
                               <button
                                 type="button"
                                 onClick={(e) => handleDeleteCustomDhikr(e, item.id)}
-                                className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 cursor-pointer"
+                                className="w-8 h-8 rounded-lg text-red-700 hover:bg-red-50 flex items-center justify-center cursor-pointer"
                                 aria-label={`Hapus ${item.latin}`}
                               >
                                 <Trash2 size={14} />
@@ -503,20 +531,20 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
                       <button
                         type="button"
                         onClick={() => setShowAddForm(true)}
-                        className="w-full mt-1.5 py-2.5 px-3 rounded-xl border border-dashed border-[#0F50BD]/35 text-[#0F50BD] text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-blue-50/60 cursor-pointer transition-colors"
+                        className="w-full min-h-[40px] mt-1.5 py-2 px-3 rounded-xl border border-dashed border-[#0F50BD]/35 text-[#0F50BD] text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-[#EFF6FF] cursor-pointer transition-colors"
                       >
-                        <Plus size={15} strokeWidth={2.5} />
-                        <span>Tambah Bacaan Custom</span>
+                        <Plus size={15} strokeWidth={2.5} aria-hidden="true" />
+                        <span>Tambah Bacaan Sendiri</span>
                       </button>
                     </>
                   ) : (
                     <form onSubmit={handleAddCustomDhikr} className="p-1.5 space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-[#101828]">Bacaan Dzikir Custom</span>
+                        <span className="text-xs font-bold text-[#101828]">Bacaan Dzikir Sendiri</span>
                         <button
                           type="button"
                           onClick={() => setShowAddForm(false)}
-                          className="p-1 rounded-lg text-[#525252] hover:bg-black/5 cursor-pointer"
+                          className="w-8 h-8 rounded-lg text-[#475467] hover:bg-[#F1F5F9] flex items-center justify-center cursor-pointer"
                           aria-label="Batal"
                         >
                           <X size={15} />
@@ -529,8 +557,8 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
                         maxLength={80}
                         value={newLatin}
                         onChange={(e) => setNewLatin(e.target.value)}
-                        placeholder="Nama / bacaan latin, mis. Sholawat Nabi"
-                        className="w-full px-3 py-2 rounded-xl border border-black/10 bg-white text-xs select-text focus:outline-none focus:ring-2 focus:ring-[#0F50BD]/30"
+                        placeholder="Bacaan latin, mis. Sholawat Nabi"
+                        className="w-full px-3 py-2 rounded-xl border border-[#CBD5E1] bg-white text-xs select-text focus:outline-none focus:border-[#0F50BD]"
                       />
 
                       <input
@@ -540,7 +568,7 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
                         value={newArabic}
                         onChange={(e) => setNewArabic(e.target.value)}
                         placeholder="Teks Arab (opsional)"
-                        className="w-full px-3 py-2 rounded-xl border border-black/10 bg-white text-xs select-text focus:outline-none focus:ring-2 focus:ring-[#0F50BD]/30"
+                        className="w-full px-3 py-2 rounded-xl border border-[#CBD5E1] bg-white text-xs font-arabic select-text focus:outline-none focus:border-[#0F50BD]"
                       />
 
                       <div className="grid grid-cols-3 gap-2">
@@ -550,7 +578,7 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
                           value={newMeaning}
                           onChange={(e) => setNewMeaning(e.target.value)}
                           placeholder="Arti / catatan"
-                          className="col-span-2 px-3 py-2 rounded-xl border border-black/10 bg-white text-xs select-text focus:outline-none focus:ring-2 focus:ring-[#0F50BD]/30"
+                          className="col-span-2 px-3 py-2 rounded-xl border border-[#CBD5E1] bg-white text-xs select-text focus:outline-none focus:border-[#0F50BD]"
                         />
                         <input
                           type="number"
@@ -561,13 +589,13 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
                           onChange={(e) => setNewTarget(e.target.value)}
                           placeholder="Jumlah"
                           aria-label="Target jumlah dzikir"
-                          className="px-3 py-2 rounded-xl border border-black/10 bg-white text-xs font-semibold text-center select-text focus:outline-none focus:ring-2 focus:ring-[#0F50BD]/30"
+                          className="px-3 py-2 rounded-xl border border-[#CBD5E1] bg-white text-xs font-semibold text-center tabular-nums select-text focus:outline-none focus:border-[#0F50BD]"
                         />
                       </div>
 
                       <button
                         type="submit"
-                        className="w-full py-2.5 rounded-xl bg-[#0F50BD] text-white text-xs font-bold hover:bg-[#1941B5] cursor-pointer transition-colors"
+                        className="w-full min-h-[40px] py-2 rounded-xl bg-[#0F50BD] text-white text-xs font-bold hover:bg-[#1941B5] cursor-pointer transition-colors"
                       >
                         Simpan &amp; Pakai Bacaan
                       </button>
@@ -579,8 +607,8 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
 
             {/* Minimalist Target Pill Bar */}
             <div className="flex items-center justify-center">
-              <div className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-black/[0.04] text-xs font-semibold text-[#525252]">
-                <span className="pr-0.5">Target:</span>
+              <div className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-white border border-[#E2E8F0] text-xs font-semibold text-[#475467]">
+                <span className="pr-1">Target:</span>
                 {PRESET_TARGETS.map((t) => (
                   <button
                     key={t}
@@ -591,7 +619,7 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
                       setShowCustomTarget(false)
                       if (count >= t) setCount(0)
                     }}
-                    className={`px-2 py-0.5 rounded-full cursor-pointer transition-colors ${
+                    className={`min-h-[30px] px-2.5 py-0.5 rounded-full tabular-nums cursor-pointer transition-colors ${
                       target === t && !showCustomTarget
                         ? 'bg-[#0F50BD] text-white font-bold'
                         : 'hover:text-[#101828]'
@@ -607,13 +635,13 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
                     setShowCustomTarget((v) => !v)
                     setIsDhikrOpen(false)
                   }}
-                  className={`px-2.5 py-0.5 rounded-full cursor-pointer transition-colors ${
+                  className={`min-h-[30px] px-2.5 py-0.5 rounded-full cursor-pointer transition-colors ${
                     !isPresetTarget || showCustomTarget
                       ? 'bg-[#0F50BD] text-white font-bold'
                       : 'hover:text-[#101828]'
                   }`}
                 >
-                  {!isPresetTarget ? `${target}` : 'Custom'}
+                  {!isPresetTarget ? `${target}` : 'Khusus'}
                 </button>
               </div>
             </div>
@@ -633,14 +661,14 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
                   value={customTargetInput}
                   onChange={(e) => setCustomTargetInput(e.target.value)}
                   placeholder="Jumlah target, mis. 500"
-                  aria-label="Target jumlah custom"
-                  className="flex-1 px-3 py-1.5 rounded-xl border border-black/10 bg-white text-sm font-bold text-[#101828] select-text focus:outline-none focus:ring-2 focus:ring-[#0F50BD]/30"
+                  aria-label="Target jumlah khusus"
+                  className="flex-1 px-3 py-2 rounded-xl border border-[#CBD5E1] bg-white text-sm font-bold text-[#101828] tabular-nums select-text focus:outline-none focus:border-[#0F50BD]"
                 />
                 <button
                   type="submit"
-                  className="px-3 py-1.5 rounded-xl bg-[#0F50BD] text-white text-xs font-bold flex items-center gap-1 hover:bg-[#1941B5] cursor-pointer"
+                  className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#0F50BD] text-white text-xs font-bold flex items-center gap-1 hover:bg-[#1941B5] cursor-pointer"
                 >
-                  <Check size={14} strokeWidth={2.5} />
+                  <Check size={14} strokeWidth={2.5} aria-hidden="true" />
                   <span>Atur</span>
                 </button>
               </form>
@@ -651,16 +679,15 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
 
       {/* ================= CENTER AREA: SERENE DHIKR & PROGRESS RING ================= */}
       <div className="relative z-10 max-w-md w-full mx-auto px-6 flex-1 flex flex-col items-center justify-center text-center pointer-events-none">
-        {/* Show serene active dhikr text directly above ring when controls are hidden */}
         {!showControls && (
           <div className="mb-6 max-w-xs">
             {activeDhikr.arabic && (
-              <div className="text-2xl sm:text-[28px] font-bold text-[#0F50BD] leading-relaxed">
+              <div className="font-arabic text-3xl font-bold text-[#0F50BD] leading-relaxed">
                 {activeDhikr.arabic}
               </div>
             )}
             <div className="text-base font-bold text-[#101828] mt-1">{activeDhikr.latin}</div>
-            <div className="text-xs text-[#525252] mt-0.5">{activeDhikr.meaning}</div>
+            <div className="text-xs text-[#475467] mt-0.5">{activeDhikr.meaning}</div>
           </div>
         )}
 
@@ -668,28 +695,22 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
         <div
           className={`relative rounded-full flex items-center justify-center transition-all duration-150 ${
             showControls ? 'w-56 h-56' : 'w-64 h-64'
-          } ${isPressed ? 'scale-[0.94]' : 'scale-100'}`}
+          } ${isPressed ? 'scale-[0.95]' : 'scale-100'}`}
         >
-          <svg className="w-full h-full -rotate-90 drop-shadow-md" viewBox="0 0 240 240">
-            <defs>
-              <linearGradient id="tasbihRingGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#0F50BD" />
-                <stop offset="100%" stopColor="#14B8A6" />
-              </linearGradient>
-            </defs>
+          <svg className="w-full h-full -rotate-90" viewBox="0 0 240 240" aria-hidden="true">
             <circle
               cx="120"
               cy="120"
               r={radius}
-              stroke="rgba(16, 24, 40, 0.08)"
+              stroke="#E2E8F0"
               strokeWidth="12"
-              fill="rgba(255, 255, 255, 0.92)"
+              fill="#FFFFFF"
             />
             <circle
               cx="120"
               cy="120"
               r={radius}
-              stroke="url(#tasbihRingGrad)"
+              stroke="#0F50BD"
               strokeWidth="12"
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
@@ -700,68 +721,73 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
           </svg>
 
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-6xl font-black text-[#0F50BD] tracking-tight tabular-nums leading-none">
+            <span className="text-6xl font-extrabold text-[#0F50BD] tracking-tight tabular-nums leading-none">
               {count}
             </span>
-            <span className="text-sm font-bold text-[#525252] mt-2 tabular-nums">
+            <span className="text-sm font-bold text-[#475467] mt-2 tabular-nums">
               / {target}
             </span>
           </div>
         </div>
       </div>
 
-      {/* ================= BOTTOM AREA: REVEALED HAPTIC & RESET OR WHISPER HINT ================= */}
+      {/* ================= BOTTOM AREA: REVEALED CONTROLS OR WHISPER HINT ================= */}
       <div className="relative z-20 max-w-md w-full mx-auto px-6 pb-[calc(24px+env(safe-area-inset-bottom))] flex flex-col items-center gap-3">
         {isHolding ? (
-          <div className="pointer-events-none w-52 px-3.5 py-2 rounded-2xl bg-white/95 border border-[#0F50BD]/20 shadow-sm text-center">
-            <div className="text-[11px] font-bold text-[#0F50BD]">
+          <div className="pointer-events-none w-52 px-3.5 py-2.5 rounded-2xl bg-white border border-[#E2E8F0] shadow-glass text-center">
+            <div className="text-xs font-bold text-[#0F50BD]">
               {showControls ? 'Menyembunyikan menu...' : 'Menampilkan konfigurasi...'}
             </div>
-            <div className="mt-1.5 h-1.5 w-full rounded-full bg-[#0F50BD]/15 overflow-hidden">
-              <div className="tasbih-hold-bar h-full w-full rounded-full bg-gradient-to-r from-[#0F50BD] to-[#14B8A6]" />
+            <div className="mt-1.5 h-1.5 w-full rounded-full bg-[#EFF6FF] overflow-hidden">
+              <div className="tasbih-hold-bar h-full w-full rounded-full bg-[#0F50BD]" />
             </div>
           </div>
         ) : showControls ? (
           <div {...stopSurfaceEvents} className="flex flex-col items-center gap-2.5 view-enter">
-            {/* Exact minimalist Haptic & Reset pills as before */}
             <div className="flex items-center justify-center gap-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !hapticEnabled
-                  setHapticEnabled(next)
-                  if (next) vibrateDevice(60)
-                }}
-                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold cursor-pointer active:scale-95 transition-all shadow-sm touch-manipulation ${
-                  hapticEnabled
-                    ? 'bg-[#0F50BD]/10 text-[#0F50BD] border border-[#0F50BD]/20'
-                    : 'glass-card text-[#525252]'
-                }`}
-                aria-pressed={hapticEnabled}
-              >
-                <Vibrate size={14} />
-                <span>Haptic: {hapticEnabled ? 'Aktif' : 'Mati'}</span>
-              </button>
+              {supportsVibrate && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !hapticEnabled
+                    setHapticEnabled(next)
+                    if (next) vibrateDevice(60)
+                  }}
+                  className={`min-h-[40px] inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold cursor-pointer active:scale-95 transition-colors touch-manipulation ${
+                    hapticEnabled
+                      ? 'bg-[#EFF6FF] text-[#0F50BD] border border-[#BFDBFE]'
+                      : 'glass-card text-[#334155]'
+                  }`}
+                  aria-pressed={hapticEnabled}
+                >
+                  <Vibrate size={14} aria-hidden="true" />
+                  <span>Getar: {hapticEnabled ? 'Aktif' : 'Mati'}</span>
+                </button>
+              )}
 
               <button
                 type="button"
                 onClick={handleReset}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full glass-card text-xs font-semibold text-[#525252] hover:text-[#101828] cursor-pointer active:scale-95 transition-all shadow-sm touch-manipulation"
+                className={`min-h-[40px] inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold cursor-pointer active:scale-95 transition-colors touch-manipulation ${
+                  confirmReset
+                    ? 'bg-red-600 text-white border border-red-600'
+                    : 'glass-card text-[#334155] hover:text-[#101828]'
+                }`}
               >
-                <RotateCcw size={14} />
-                <span>Mulai dari 0</span>
+                <RotateCcw size={14} aria-hidden="true" />
+                <span>{confirmReset ? 'Ketuk lagi: Reset ke 0?' : 'Mulai dari 0'}</span>
               </button>
             </div>
-            <p className="pointer-events-none text-[11px] text-[#525252]/70">
+            <p className="pointer-events-none text-xs text-[#475467]">
               Tahan layar lagi untuk menyembunyikan
             </p>
           </div>
         ) : (
           <div className="pointer-events-none text-center space-y-1">
-            <p className="text-xs font-semibold text-[#525252]">
+            <p className="text-xs font-semibold text-[#334155]">
               Ketuk di mana saja untuk hitung
             </p>
-            <p className="text-[11px] text-[#525252]/75">
+            <p className="text-xs text-[#475467]">
               Tekan &amp; tahan layar untuk tampilkan konfigurasi
             </p>
           </div>

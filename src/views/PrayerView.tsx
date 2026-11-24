@@ -28,73 +28,80 @@ export const PrayerView: React.FC<PrayerViewProps> = ({ city, prayerSchedule, on
   const nextRemaining = prayerSchedule?.nextPrayer?.remainingLabel || 'Mengambil jadwal Kemenag RI...'
 
   return (
-    <div className="space-y-4 pb-24">
+    <div className="space-y-4 pb-28">
       {/* Header with back button */}
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={onBack}
-          className="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-[#101828] hover:bg-white cursor-pointer active:scale-95 transition-all shadow-sm"
+          className="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-[#101828] hover:border-[#CBD5E1] cursor-pointer active:scale-95 transition-all shrink-0"
           aria-label="Kembali ke Beranda"
         >
           <ArrowLeft size={19} />
         </button>
-        <div>
-          <h1 className="text-xl font-bold text-[#101828]">Jadwal Sholat Lengkap</h1>
-          <div className="flex items-center gap-1 text-xs text-[#525252]">
-            <MapPin size={13} className="text-[#0F50BD]" />
-            <span>{city}</span>
-            <span>•</span>
-            <span>Bimas Islam Kemenag RI</span>
+        <div className="min-w-0">
+          <h1 className="text-xl font-extrabold text-[#101828] tracking-tight">
+            Jadwal Sholat Lengkap
+          </h1>
+          <div className="flex items-center gap-1.5 text-xs text-[#475467] mt-0.5 truncate">
+            <MapPin size={13} className="text-[#0F50BD] shrink-0" aria-hidden="true" />
+            <span className="truncate">{city}</span>
+            <span aria-hidden="true">·</span>
+            <span className="shrink-0">Kemenag RI</span>
           </div>
         </div>
       </div>
 
-      {/* Next Prayer Highlight Card */}
-      <div className="bg-gradient-to-r from-[#0F50BD] to-[#1941B5] text-white p-5 rounded-[22px] shadow-[0_8px_24px_rgba(25,65,181,0.2)]">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-[#8BA0F3] uppercase tracking-wider">
-            Sholat Berikutnya
+      {/* Quiet Next Prayer Summary Card */}
+      <div className="glass-card p-5 flex items-center justify-between gap-3">
+        <div>
+          <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#EFF6FF] text-[#0F50BD] text-xs font-bold">
+            {nextName} berikutnya
           </span>
-          <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-bold">
-            {nextName}
-          </span>
+          <p className="text-xs text-[#475467] mt-2">{nextRemaining}</p>
         </div>
-        <div className="mt-2 text-3xl font-extrabold">{nextTime}</div>
-        <p className="text-xs text-white/80 mt-1">{nextRemaining}</p>
+        <div className="text-3xl font-extrabold text-[#0F50BD] tabular-nums tracking-tight shrink-0">
+          {nextTime}
+        </div>
       </div>
 
       {/* Detailed Prayer List */}
-      <div className="glass-card divide-y divide-black/[0.05] overflow-hidden">
+      <div className="glass-card divide-y divide-[#EEF2F6] overflow-hidden">
         {prayerDetails.map((item) => {
           const isNext = item.id === nextId
           return (
             <div
               key={item.id}
-              className={`p-4 flex items-center justify-between transition-colors ${
-                isNext ? 'bg-[#0F50BD]/5' : ''
+              className={`px-4 py-3.5 flex items-center justify-between gap-2 transition-colors ${
+                isNext ? 'bg-[#F5F9FF]' : ''
               }`}
             >
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-sm font-bold ${isNext ? 'text-[#0F50BD]' : 'text-[#101828]'}`}>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span
+                    className={`text-sm font-bold ${isNext ? 'text-[#0F50BD]' : 'text-[#101828]'}`}
+                  >
                     {item.name}
                   </span>
                   {isNext && (
-                    <span className="px-2 py-0.5 rounded-full bg-[#0F50BD] text-white text-[10px] font-bold">
+                    <span className="px-2 py-0.5 rounded-full bg-[#0F50BD] text-white text-[11px] font-bold">
                       Berikutnya
                     </span>
                   )}
                   {item.forbidden && (
-                    <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[10px] font-semibold">
+                    <span className="px-2 py-0.5 rounded-md bg-red-50 border border-red-200 text-red-700 text-[11px] font-semibold">
                       Larangan Sholat
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-[#525252] mt-0.5">{item.note}</div>
+                <div className="text-xs text-[#475467] mt-0.5">{item.note}</div>
               </div>
 
-              <div className={`text-base font-bold ${isNext ? 'text-[#0F50BD]' : 'text-[#101828]'}`}>
+              <div
+                className={`text-base font-bold tabular-nums shrink-0 ${
+                  isNext ? 'text-[#0F50BD]' : 'text-[#101828]'
+                }`}
+              >
                 {item.time}
               </div>
             </div>
@@ -103,11 +110,11 @@ export const PrayerView: React.FC<PrayerViewProps> = ({ city, prayerSchedule, on
       </div>
 
       {/* Note Waktu Tahrim */}
-      <div className="glass-card p-4 flex items-start gap-2.5 bg-amber-50/40 border-amber-200/50">
-        <AlertCircle size={18} className="text-[#F59E0B] shrink-0 mt-0.5" />
-        <div className="text-xs text-[#525252] leading-relaxed">
-          <b className="text-[#101828]">Waktu Terlarang Sholat (Tahrim):</b> Saat matahari tepat terbit hingga naik setinggi tombak (sekitar 15-20 menit setelah terbit), saat matahari tepat di puncaknya (istiwak), dan saat matahari tenggelam hingga sempurna.
-        </div>
+      <div className="rounded-[18px] p-4 flex items-start gap-2.5 bg-[#FFFBEB] border border-[#FDE68A]">
+        <AlertCircle size={18} className="text-[#B45309] shrink-0 mt-0.5" aria-hidden="true" />
+        <p className="text-xs text-[#475467] leading-relaxed">
+          <b className="text-[#101828]">Waktu Terlarang Sholat (Tahrim):</b> Saat matahari tepat terbit hingga naik setinggi tombak (sekitar 15–20 menit setelah terbit), saat matahari tepat di puncaknya (istiwak), dan saat matahari tenggelam hingga sempurna.
+        </p>
       </div>
     </div>
   )

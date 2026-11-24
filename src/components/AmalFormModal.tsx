@@ -41,9 +41,11 @@ export const AmalFormModal: React.FC<AmalFormModalProps> = ({
   const [type, setType] = useState<CustomAmalType>('checklist')
   const [target, setTarget] = useState('1')
   const [unit, setUnit] = useState('juz')
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
     if (!isOpen) return
+    setConfirmDelete(false)
     if (editingItem && editingItem.type !== 'prayers') {
       setName(editingItem.name)
       setType(editingItem.type)
@@ -56,6 +58,15 @@ export const AmalFormModal: React.FC<AmalFormModalProps> = ({
       setUnit('juz')
     }
   }, [isOpen, editingItem])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [isOpen, onClose])
 
   if (!isOpen) return null
 
@@ -99,7 +110,7 @@ export const AmalFormModal: React.FC<AmalFormModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#101828]/40 backdrop-blur-[3px] p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#101828]/45 p-0 sm:p-4"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -107,18 +118,18 @@ export const AmalFormModal: React.FC<AmalFormModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md bg-white rounded-t-[26px] sm:rounded-[24px] p-5 pb-[calc(24px+env(safe-area-inset-bottom))] sm:pb-6 shadow-floating view-enter"
+        className="w-full max-w-md bg-white rounded-t-[24px] sm:rounded-[22px] p-5 pb-[calc(24px+env(safe-area-inset-bottom))] sm:pb-6 shadow-floating view-enter"
       >
         {/* Grab handle on mobile */}
-        <div className="w-10 h-1 rounded-full bg-black/15 mx-auto mb-3 sm:hidden" />
+        <div className="w-10 h-1 rounded-full bg-[#CBD5E1] mx-auto mb-3 sm:hidden" />
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-start justify-between gap-2 mb-4">
           <div>
             <h3 className="text-base font-bold text-[#101828]">
               {isEditing ? 'Ubah Target Harian' : 'Tambah Amal Baru'}
             </h3>
-            <p className="text-[11.5px] text-[#525252]">
+            <p className="text-xs text-[#475467] mt-0.5">
               {isEditing
                 ? 'Sesuaikan jumlah target tanpa mengubah riwayat laporan'
                 : 'Catat kebiasaan ibadah atau target harianmu sendiri'}
@@ -127,7 +138,7 @@ export const AmalFormModal: React.FC<AmalFormModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-black/[0.05] text-[#525252] hover:text-[#101828] flex items-center justify-center cursor-pointer transition-colors"
+            className="w-10 h-10 rounded-xl bg-[#F1F5F9] text-[#475467] hover:text-[#101828] flex items-center justify-center cursor-pointer transition-colors shrink-0"
             aria-label="Tutup form"
           >
             <X size={18} />
@@ -136,55 +147,52 @@ export const AmalFormModal: React.FC<AmalFormModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {isEditing && editingItem ? (
-            <>
-              {/* Locked identity summary so historical logs remain accurate */}
-              <div className="p-3.5 rounded-2xl bg-[#F7F9FF] border border-[#0F50BD]/15 space-y-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <div className="text-sm font-bold text-[#101828]">{editingItem.name}</div>
-                    <div className="text-[11px] text-[#525252]">
-                      Tipe Target · Satuan: <b>{editingItem.unit || 'kali'}</b>
-                    </div>
-                  </div>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/[0.05] text-[10px] font-semibold text-[#525252] shrink-0">
-                    <Lock size={10} />
-                    Terkunci
-                  </span>
-                </div>
-
+            <div className="space-y-3 pt-2 border-t border-[#EEF2F6]">
+              <div className="flex items-center justify-between gap-2">
                 <div>
-                  <label
-                    htmlFor="amal-edit-target-input"
-                    className="text-[11px] font-bold text-[#525252] block mb-1"
-                  >
-                    Jumlah Target ({editingItem.unit || 'kali'})
-                  </label>
-                  <input
-                    id="amal-edit-target-input"
-                    type="number"
-                    min={1}
-                    max={100000}
-                    inputMode="numeric"
-                    autoFocus
-                    required
-                    value={target}
-                    onChange={(e) => setTarget(e.target.value)}
-                    className="w-full px-3.5 py-3 rounded-xl border border-black/15 bg-white text-base font-extrabold text-[#0F50BD] tabular-nums focus:outline-none focus:ring-2 focus:ring-[#0F50BD]/30 focus:border-[#0F50BD]"
-                  />
+                  <div className="text-sm font-bold text-[#101828]">{editingItem.name}</div>
+                  <div className="text-xs text-[#475467]">
+                    Tipe Target · Satuan: <b>{editingItem.unit || 'kali'}</b>
+                  </div>
                 </div>
-
-                <p className="text-[11px] text-[#525252]/85 leading-relaxed">
-                  Nama, tipe, dan satuan dikunci agar laporan riwayat tetap akurat. Jika ingin amal berbeda, hapus lalu buat amal baru.
-                </p>
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[#F1F5F9] text-[11px] font-semibold text-[#475467] shrink-0">
+                  <Lock size={11} aria-hidden="true" />
+                  Terkunci
+                </span>
               </div>
-            </>
+
+              <div>
+                <label
+                  htmlFor="amal-edit-target-input"
+                  className="text-xs font-bold text-[#334155] block mb-1.5"
+                >
+                  Jumlah Target ({editingItem.unit || 'kali'})
+                </label>
+                <input
+                  id="amal-edit-target-input"
+                  type="number"
+                  min={1}
+                  max={100000}
+                  inputMode="numeric"
+                  autoFocus
+                  required
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value)}
+                  className="w-full px-3.5 py-3 rounded-xl border border-[#CBD5E1] bg-white text-base font-extrabold text-[#0F50BD] tabular-nums focus:outline-none focus:border-[#0F50BD]"
+                />
+              </div>
+
+              <p className="text-xs text-[#475467] leading-relaxed">
+                Nama, tipe, dan satuan dikunci agar laporan riwayat tetap akurat. Jika ingin amal berbeda, hapus lalu buat amal baru.
+              </p>
+            </div>
           ) : (
             <>
               {/* Nama Amal */}
               <div>
                 <label
                   htmlFor="amal-name-input"
-                  className="text-xs font-bold text-[#525252] block mb-1.5"
+                  className="text-xs font-bold text-[#334155] block mb-1.5"
                 >
                   Nama Amal
                 </label>
@@ -197,13 +205,13 @@ export const AmalFormModal: React.FC<AmalFormModalProps> = ({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Mis. Baca Qur'an, Sholat Dhuha, Sedekah"
-                  className="w-full px-3.5 py-3 rounded-xl border border-black/15 bg-white text-sm font-medium text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#0F50BD]/30 focus:border-[#0F50BD]"
+                  className="w-full px-3.5 py-3 rounded-xl border border-[#CBD5E1] bg-white text-sm font-medium text-[#101828] focus:outline-none focus:border-[#0F50BD]"
                 />
               </div>
 
               {/* Tipe Catatan Selector */}
               <div>
-                <span className="text-xs font-bold text-[#525252] block mb-1.5">Tipe Catatan</span>
+                <span className="text-xs font-bold text-[#334155] block mb-1.5">Tipe Catatan</span>
                 <div className="grid grid-cols-2 gap-2">
                   {TYPE_OPTIONS.map((opt) => {
                     const Icon = opt.icon
@@ -213,22 +221,23 @@ export const AmalFormModal: React.FC<AmalFormModalProps> = ({
                         key={opt.value}
                         type="button"
                         onClick={() => setType(opt.value)}
-                        className={`p-2.5 rounded-xl border text-left flex items-start gap-2.5 cursor-pointer transition-all ${
+                        aria-pressed={active}
+                        className={`p-2.5 rounded-xl border text-left flex items-start gap-2.5 cursor-pointer transition-colors ${
                           active
-                            ? 'bg-[#0F50BD]/10 border-[#0F50BD] text-[#0F50BD]'
-                            : 'bg-white border-black/10 text-[#101828] hover:border-black/20'
+                            ? 'bg-[#EFF6FF] border-[#0F50BD] text-[#0F50BD]'
+                            : 'bg-white border-[#E2E8F0] text-[#101828] hover:border-[#CBD5E1]'
                         }`}
                       >
                         <div
                           className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                            active ? 'bg-[#0F50BD] text-white' : 'bg-black/[0.05] text-[#525252]'
+                            active ? 'bg-[#0F50BD] text-white' : 'bg-[#F1F5F9] text-[#475467]'
                           }`}
                         >
-                          <Icon size={16} />
+                          <Icon size={16} aria-hidden="true" />
                         </div>
                         <div className="min-w-0">
                           <div className="text-xs font-bold leading-tight">{opt.label}</div>
-                          <div className="text-[10.5px] text-[#525252] mt-0.5 leading-tight">
+                          <div className="text-[11px] text-[#475467] mt-0.5 leading-tight">
                             {opt.desc}
                           </div>
                         </div>
@@ -238,14 +247,14 @@ export const AmalFormModal: React.FC<AmalFormModalProps> = ({
                 </div>
               </div>
 
-              {/* Target + Satuan fields (when Target is selected) */}
+              {/* Target + Satuan fields */}
               {type === 'target' && (
-                <div className="space-y-2.5 p-3.5 rounded-2xl bg-[#F7F9FF] border border-[#0F50BD]/15">
+                <div className="space-y-2.5 pt-3 border-t border-[#EEF2F6]">
                   <div className="grid grid-cols-2 gap-2.5">
                     <div>
                       <label
                         htmlFor="amal-target-input"
-                        className="text-[11px] font-bold text-[#525252] block mb-1"
+                        className="text-xs font-bold text-[#334155] block mb-1"
                       >
                         Jumlah Target
                       </label>
@@ -259,13 +268,13 @@ export const AmalFormModal: React.FC<AmalFormModalProps> = ({
                         value={target}
                         onChange={(e) => setTarget(e.target.value)}
                         placeholder="1"
-                        className="w-full px-3 py-2.5 rounded-xl border border-black/15 bg-white text-sm font-bold text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#0F50BD]/30"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#CBD5E1] bg-white text-sm font-bold text-[#101828] tabular-nums focus:outline-none focus:border-[#0F50BD]"
                       />
                     </div>
                     <div>
                       <label
                         htmlFor="amal-unit-input"
-                        className="text-[11px] font-bold text-[#525252] block mb-1"
+                        className="text-xs font-bold text-[#334155] block mb-1"
                       >
                         Satuan
                       </label>
@@ -276,7 +285,7 @@ export const AmalFormModal: React.FC<AmalFormModalProps> = ({
                         value={unit}
                         onChange={(e) => setUnit(e.target.value)}
                         placeholder="juz, halaman..."
-                        className="w-full px-3 py-2.5 rounded-xl border border-black/15 bg-white text-sm font-semibold text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#0F50BD]/30"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#CBD5E1] bg-white text-sm font-semibold text-[#101828] focus:outline-none focus:border-[#0F50BD]"
                       />
                     </div>
                   </div>
@@ -288,10 +297,10 @@ export const AmalFormModal: React.FC<AmalFormModalProps> = ({
                         key={preset}
                         type="button"
                         onClick={() => setUnit(preset)}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold cursor-pointer transition-colors ${
+                        className={`min-h-[32px] px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-colors ${
                           unit.toLowerCase() === preset
                             ? 'bg-[#0F50BD] text-white'
-                            : 'bg-white border border-black/10 text-[#525252] hover:border-[#0F50BD]/40'
+                            : 'bg-[#F1F5F9] text-[#334155] hover:bg-[#E2E8F0]'
                         }`}
                       >
                         {preset}
@@ -306,7 +315,7 @@ export const AmalFormModal: React.FC<AmalFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="amal-counter-unit"
-                    className="text-xs font-bold text-[#525252] block mb-1.5"
+                    className="text-xs font-bold text-[#334155] block mb-1.5"
                   >
                     Satuan (opsional)
                   </label>
@@ -317,7 +326,7 @@ export const AmalFormModal: React.FC<AmalFormModalProps> = ({
                     value={unit}
                     onChange={(e) => setUnit(e.target.value)}
                     placeholder="Mis. kali, rakaat"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-black/15 bg-white text-sm text-[#101828] focus:outline-none focus:ring-2 focus:ring-[#0F50BD]/30"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#CBD5E1] bg-white text-sm text-[#101828] focus:outline-none focus:border-[#0F50BD]"
                   />
                 </div>
               )}
@@ -325,25 +334,33 @@ export const AmalFormModal: React.FC<AmalFormModalProps> = ({
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-2.5 pt-1">
+          <div className="flex items-center gap-2.5 pt-2">
             {editingItem && onDelete && (
               <button
                 type="button"
                 onClick={() => {
+                  if (!confirmDelete) {
+                    setConfirmDelete(true)
+                    return
+                  }
                   onDelete(editingItem.id)
                   onClose()
                 }}
-                className="px-3.5 py-3 rounded-full border border-red-200 bg-red-50/70 text-red-600 text-xs font-bold flex items-center gap-1.5 hover:bg-red-100 cursor-pointer transition-colors"
+                className={`min-h-[44px] px-3.5 py-2.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                  confirmDelete
+                    ? 'border-red-600 bg-red-600 text-white'
+                    : 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
+                }`}
                 aria-label="Hapus amal"
               >
-                <Trash2 size={15} />
-                <span>Hapus</span>
+                <Trash2 size={15} aria-hidden="true" />
+                <span>{confirmDelete ? 'Yakin Hapus?' : 'Hapus'}</span>
               </button>
             )}
 
             <button
               type="submit"
-              className="flex-1 py-3 px-5 rounded-full bg-[#0F50BD] text-white text-sm font-bold hover:bg-[#1941B5] shadow-[0_4px_14px_rgba(15,80,189,0.3)] active:scale-[0.98] transition-all cursor-pointer"
+              className="flex-1 min-h-[44px] py-3 px-5 rounded-xl bg-[#0F50BD] text-white text-sm font-bold hover:bg-[#1941B5] active:scale-[0.98] transition-all cursor-pointer"
             >
               {isEditing ? 'Simpan Target' : 'Simpan Amal'}
             </button>

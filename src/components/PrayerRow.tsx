@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { Sunrise, Sun, Sunset, Moon, Sparkles } from 'lucide-react'
+import { Sunrise, Sun, Sunset, Moon, SunDim } from 'lucide-react'
 
 interface PrayerItem {
   id: string
@@ -11,7 +11,7 @@ interface PrayerItem {
 
 interface PrayerRowProps {
   prayers?: PrayerItem[]
-  city: string
+  city?: string
   onSelectPrayer?: (prayer: PrayerItem) => void
 }
 
@@ -26,7 +26,6 @@ const LOADING_PRAYERS: PrayerItem[] = [
 
 export const PrayerRow: React.FC<PrayerRowProps> = ({
   prayers = LOADING_PRAYERS,
-  city,
   onSelectPrayer,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
@@ -34,8 +33,6 @@ export const PrayerRow: React.FC<PrayerRowProps> = ({
 
   const nextPrayerId = prayers.find((p) => p.isNext)?.id
 
-  // Auto-center the active next-prayer card horizontally (never scrolls the page vertically,
-  // and only re-runs when the active next prayer actually changes so manual swipes aren't fought)
   useEffect(() => {
     if (!nextPrayerId) return
     const container = scrollContainerRef.current
@@ -59,71 +56,61 @@ export const PrayerRow: React.FC<PrayerRowProps> = ({
     return () => cancelAnimationFrame(rafId)
   }, [nextPrayerId])
 
-  const getIcon = (id: string) => {
+  const getIcon = (id: string, isNext?: boolean) => {
+    const cls = isNext ? 'text-[#5EEAD4]' : 'text-[#0F50BD]'
     switch (id) {
       case 'subuh':
-        return <Sunrise size={20} className="text-[#F59E0B]" />
+        return <Sunrise size={15} className={cls} aria-hidden="true" />
       case 'terbit':
-        return <Sparkles size={19} className="text-[#F59E0B]" />
+        return <SunDim size={15} className={cls} aria-hidden="true" />
       case 'dzuhur':
-        return <Sun size={20} className="text-[#F59E0B]" />
       case 'ashar':
-        return <Sun size={20} className="text-[#F59E0B]" />
+        return <Sun size={15} className={cls} aria-hidden="true" />
       case 'maghrib':
-        return <Sunset size={20} className="text-[#F59E0B]" />
+        return <Sunset size={15} className={cls} aria-hidden="true" />
       case 'isya':
       default:
-        return <Moon size={20} className="text-[#F59E0B]" />
+        return <Moon size={15} className={cls} aria-hidden="true" />
     }
   }
 
   return (
-    <div className="mt-6">
-      <div className="flex items-center justify-between mb-3 px-1">
-        <h3 className="text-base font-bold text-[#101828]">Prayer Times</h3>
-        <span className="text-xs font-medium text-[#525252] flex items-center gap-1">
-          <span>{city}</span>
-        </span>
-      </div>
-
-      {/* Horizontal scrollable row — auto-focuses active next prayer */}
-      <div
-        ref={scrollContainerRef}
-        className="flex gap-2.5 overflow-x-auto pt-1 pb-2.5 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0"
-      >
-        {prayers.map((p) => {
-          return (
-            <button
-              key={p.id}
-              ref={(el) => {
-                itemRefs.current[p.id] = el
-              }}
-              type="button"
-              onClick={() => onSelectPrayer?.(p)}
-              className={`flex-1 min-w-[76px] p-3 rounded-2xl flex flex-col items-center justify-center transition-all duration-200 cursor-pointer ${
-                p.isNext
-                  ? 'bg-[#0F50BD] text-white shadow-[0_6px_18px_rgba(15,80,189,0.3)] ring-2 ring-[#0F50BD]/30 scale-[1.03]'
-                  : 'glass-card text-[#101828] hover:bg-white'
-              }`}
-            >
-              <div className="mb-1.5">{getIcon(p.id)}</div>
-              <span
-                className={`text-[12px] font-semibold ${
-                  p.isNext ? 'text-white/90' : 'text-[#525252]'
-                }`}
-              >
-                {p.name}
-              </span>
-              <span className={`text-[14px] font-bold ${p.isNext ? 'text-white' : 'text-[#101828]'}`}>
-                {p.time}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-      <p className="text-[11px] text-[#525252]/75 mt-1.5 px-1">
-        Metode Kemenag RI · waktu berikutnya ditandai biru
-      </p>
+    <div
+      ref={scrollContainerRef}
+      className="flex gap-2 overflow-x-auto py-0.5 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0"
+      aria-label="Jadwal sholat hari ini"
+    >
+      {prayers.map((p) => (
+        <button
+          key={p.id}
+          ref={(el) => {
+            itemRefs.current[p.id] = el
+          }}
+          type="button"
+          onClick={() => onSelectPrayer?.(p)}
+          className={`flex-1 min-w-[70px] px-2.5 py-2 rounded-2xl border flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer active:scale-95 ${
+            p.isNext
+              ? 'bg-[#0F50BD] border-[#0F50BD] text-white shadow-sm'
+              : 'bg-white border-[#E2E8F0] text-[#101828] hover:border-[#CBD5E1]'
+          }`}
+        >
+          <div className="mb-0.5">{getIcon(p.id, p.isNext)}</div>
+          <span
+            className={`text-[11px] font-semibold leading-tight ${
+              p.isNext ? 'text-[#DBEAFE]' : 'text-[#475467]'
+            }`}
+          >
+            {p.name}
+          </span>
+          <span
+            className={`text-[13px] font-bold tabular-nums leading-tight ${
+              p.isNext ? 'text-white' : 'text-[#101828]'
+            }`}
+          >
+            {p.time}
+          </span>
+        </button>
+      ))}
     </div>
   )
 }
