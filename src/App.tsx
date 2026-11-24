@@ -736,112 +736,116 @@ export default function App() {
         onClose={() => setShowStreakModal(false)}
       />
 
+      {/* Full-Screen Tasbih Canvas (mounted outside .view-enter transform so fixed inset-0 covers 100% viewport) */}
+      {activeTab === 'tasbih' && <TasbihView onBack={() => setActiveTab('beranda')} />}
+
       {/* Main Container */}
-      <main className="max-w-md mx-auto min-h-screen px-4 pt-2 sm:pt-4 pb-20 relative z-10">
-        <div key={activeTab} className="view-enter">
-          {/* VIEW: BERANDA */}
-          {activeTab === 'beranda' && (
-            <div className="space-y-2">
-              <HeroPrayer
+      {activeTab !== 'tasbih' && (
+        <main className="max-w-md mx-auto min-h-screen px-4 pt-2 sm:pt-4 pb-20 relative z-10">
+          <div key={activeTab} className="view-enter">
+            {/* VIEW: BERANDA */}
+            {activeTab === 'beranda' && (
+              <div className="space-y-2">
+                <HeroPrayer
+                  city={city}
+                  gregorianDate={prayerSchedule?.gregorianDate}
+                  currentTime={prayerSchedule?.currentTime}
+                  tzLabel={prayerSchedule?.tzLabel}
+                  arcProgress={prayerSchedule?.arcProgress}
+                  currentPrayerName={prayerSchedule?.currentPrayer?.name}
+                  currentPrayerTime={prayerSchedule?.currentPrayer?.time}
+                  nextPrayerName={prayerSchedule?.nextPrayer?.name}
+                  nextPrayerTime={prayerSchedule?.nextPrayer?.time}
+                  remainingTime={prayerSchedule?.nextPrayer?.remaining}
+                  hijriData={hijriData}
+                  onOpenPrayerDetail={() => setActiveTab('prayer')}
+                  onOpenCalendar={() => setActiveTab('kalender')}
+                />
+
+                <QuickActions
+                  streakDays={streakDays}
+                  last7DaysActive={last7DaysActive}
+                  onNavigate={(tab) => setActiveTab(tab)}
+                  onScrollToChecklist={() => scrollToSection('checklist-section')}
+                  onOpenStreak={() => setShowStreakModal(true)}
+                />
+
+                <PrayerRow
+                  city={city}
+                  prayers={prayerSchedule?.prayers}
+                  onSelectPrayer={() => setActiveTab('prayer')}
+                />
+
+                <AmalChecklist
+                  items={hydratedItems}
+                  onTogglePrayer={handleTogglePrayer}
+                  onToggleCheck={handleToggleCheck}
+                  onIncrementCounter={handleIncrementCounter}
+                  onUpdateValue={handleUpdateValue}
+                  onOpenAddAmal={handleOpenAddAmal}
+                  onEditAmal={handleOpenEditAmal}
+                />
+              </div>
+            )}
+
+            {/* VIEW: QURAN */}
+            {activeTab === 'quran' && (
+              <QuranView
+                dailyTarget={effectiveQuranTarget}
+                pagesReadToday={pagesReadToday}
+                totalPagesRead={totalTilawahPages}
+                hijriDateLabel={hijriData?.formattedDate}
+                linkedAmalName={linkedQuranAmal?.name}
+                onChangePagesToday={handleChangeQuranPages}
+                onAddToChecklist={handleAddQuranToChecklist}
+              />
+            )}
+
+            {/* VIEW: KALENDER */}
+            {activeTab === 'kalender' && <KalenderView hijriData={hijriData} />}
+
+            {/* VIEW: ATUR */}
+            {activeTab === 'atur' && (
+              <AturView
                 city={city}
-                gregorianDate={prayerSchedule?.gregorianDate}
-                currentTime={prayerSchedule?.currentTime}
-                tzLabel={prayerSchedule?.tzLabel}
-                arcProgress={prayerSchedule?.arcProgress}
-                currentPrayerName={prayerSchedule?.currentPrayer?.name}
-                currentPrayerTime={prayerSchedule?.currentPrayer?.time}
-                nextPrayerName={prayerSchedule?.nextPrayer?.name}
-                nextPrayerTime={prayerSchedule?.nextPrayer?.time}
-                remainingTime={prayerSchedule?.nextPrayer?.remaining}
-                hijriData={hijriData}
-                onOpenPrayerDetail={() => setActiveTab('prayer')}
-                onOpenCalendar={() => setActiveTab('kalender')}
-              />
-
-              <QuickActions
-                streakDays={streakDays}
-                last7DaysActive={last7DaysActive}
-                onNavigate={(tab) => setActiveTab(tab)}
-                onScrollToChecklist={() => scrollToSection('checklist-section')}
-                onOpenStreak={() => setShowStreakModal(true)}
-              />
-
-              <PrayerRow
-                city={city}
-                prayers={prayerSchedule?.prayers}
-                onSelectPrayer={() => setActiveTab('prayer')}
-              />
-
-              <AmalChecklist
-                items={hydratedItems}
-                onTogglePrayer={handleTogglePrayer}
-                onToggleCheck={handleToggleCheck}
-                onIncrementCounter={handleIncrementCounter}
-                onUpdateValue={handleUpdateValue}
+                cityMode={cityMode}
+                isLocatingCity={isLocatingCity}
+                locationMessage={locationMessage}
+                locationError={locationError}
+                onDetectLocation={() => runDeviceGeolocation(true)}
+                onChangeCity={handleChangeCity}
+                tilawahTarget={effectiveQuranTarget}
+                onChangeTilawahTarget={handleChangeTilawahTarget}
+                customAmalItems={customAmalItems}
                 onOpenAddAmal={handleOpenAddAmal}
                 onEditAmal={handleOpenEditAmal}
+                onDeleteCustomAmal={handleDeleteCustomAmal}
+                onReplayOnboarding={() => setShowOnboarding(true)}
+                canInstallPwa={Boolean(deferredInstallPrompt)}
+                isPwaInstalled={isPwaInstalled}
+                onInstallPwa={handleInstallPwa}
               />
-            </div>
-          )}
+            )}
 
-          {/* VIEW: QURAN */}
-          {activeTab === 'quran' && (
-            <QuranView
-              dailyTarget={effectiveQuranTarget}
-              pagesReadToday={pagesReadToday}
-              totalPagesRead={totalTilawahPages}
-              hijriDateLabel={hijriData?.formattedDate}
-              linkedAmalName={linkedQuranAmal?.name}
-              onChangePagesToday={handleChangeQuranPages}
-              onAddToChecklist={handleAddQuranToChecklist}
-            />
-          )}
+            {/* VIEW: PRAYER DETAIL */}
+            {activeTab === 'prayer' && (
+              <PrayerView
+                city={city}
+                prayerSchedule={prayerSchedule}
+                onBack={() => setActiveTab('beranda')}
+              />
+            )}
+          </div>
+        </main>
+      )}
 
-          {/* VIEW: TASBIH */}
-          {activeTab === 'tasbih' && <TasbihView />}
-
-          {/* VIEW: KALENDER */}
-          {activeTab === 'kalender' && <KalenderView hijriData={hijriData} />}
-
-          {/* VIEW: ATUR */}
-          {activeTab === 'atur' && (
-            <AturView
-              city={city}
-              cityMode={cityMode}
-              isLocatingCity={isLocatingCity}
-              locationMessage={locationMessage}
-              locationError={locationError}
-              onDetectLocation={() => runDeviceGeolocation(true)}
-              onChangeCity={handleChangeCity}
-              tilawahTarget={effectiveQuranTarget}
-              onChangeTilawahTarget={handleChangeTilawahTarget}
-              customAmalItems={customAmalItems}
-              onOpenAddAmal={handleOpenAddAmal}
-              onEditAmal={handleOpenEditAmal}
-              onDeleteCustomAmal={handleDeleteCustomAmal}
-              onReplayOnboarding={() => setShowOnboarding(true)}
-              canInstallPwa={Boolean(deferredInstallPrompt)}
-              isPwaInstalled={isPwaInstalled}
-              onInstallPwa={handleInstallPwa}
-            />
-          )}
-
-          {/* VIEW: PRAYER DETAIL */}
-          {activeTab === 'prayer' && (
-            <PrayerView
-              city={city}
-              prayerSchedule={prayerSchedule}
-              onBack={() => setActiveTab('beranda')}
-            />
-          )}
-        </div>
-      </main>
-
-      {/* Floating Bottom Nav */}
-      <BottomNav
-        activeTab={activeTab === 'prayer' || activeTab === 'tasbih' ? 'beranda' : activeTab}
-        onSelectTab={(tab) => setActiveTab(tab)}
-      />
+      {/* Floating Bottom Nav (hidden in full-screen Tasbih mode to avoid accidental taps) */}
+      {activeTab !== 'tasbih' && (
+        <BottomNav
+          activeTab={activeTab === 'prayer' ? 'beranda' : activeTab}
+          onSelectTab={(tab) => setActiveTab(tab)}
+        />
+      )}
     </div>
   )
 }
