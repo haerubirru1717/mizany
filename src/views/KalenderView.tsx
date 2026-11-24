@@ -244,17 +244,17 @@ export const KalenderView: React.FC<KalenderViewProps> = ({
 
   return (
     <div className="space-y-4 pb-28">
-      {/* Top Active Date Banner (crisp white surface with blue accent, zero truncation) */}
-      <div className="glass-card p-3.5 flex items-center justify-between gap-2.5">
+      {/* Top Active Date Banner (rich Tazkirah Blue anchor, zero truncation) */}
+      <div className="bg-gradient-to-r from-[#0F50BD] to-[#1941B5] text-white p-4 rounded-[22px] shadow-[0_8px_22px_rgba(25,65,181,0.2)] flex items-center justify-between gap-2.5">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] text-[#0F50BD] flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-white/18 border border-white/25 flex items-center justify-center shrink-0">
             <CalendarIcon size={19} aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <div className="text-[13.5px] font-bold text-[#101828] leading-snug">
+            <div className="text-[14px] font-bold text-white leading-snug">
               {headerGregorianLine}
             </div>
-            <div className="text-xs text-[#475467] font-medium mt-0.5 truncate">
+            <div className="text-xs text-[#DBEAFE] font-medium mt-0.5 truncate">
               {headerHijriLine}
             </div>
           </div>
@@ -265,7 +265,7 @@ export const KalenderView: React.FC<KalenderViewProps> = ({
             <button
               type="button"
               onClick={() => onOpenChecklistForDate(selectedDay.gregorian)}
-              className="min-h-[36px] px-3 py-1.5 rounded-xl bg-[#0F50BD] text-white text-[11px] font-bold inline-flex items-center gap-1 hover:bg-[#1941B5] active:scale-95 transition-all cursor-pointer"
+              className="min-h-[36px] px-3 py-1.5 rounded-xl bg-white text-[#0F50BD] text-[11px] font-bold inline-flex items-center gap-1 shadow-sm hover:bg-[#EFF6FF] active:scale-95 transition-all cursor-pointer"
             >
               <span>{selectedDayHasLogs ? `Amal ${selectedDayPrayerCount}/5` : 'Isi Amal'}</span>
               <ArrowUpRight size={13} strokeWidth={2.5} aria-hidden="true" />
@@ -275,7 +275,7 @@ export const KalenderView: React.FC<KalenderViewProps> = ({
             <button
               type="button"
               onClick={handleJumpToday}
-              className="min-h-[36px] px-2.5 py-1.5 rounded-xl bg-[#F1F5F9] text-[11px] font-bold text-[#334155] hover:bg-[#E2E8F0] cursor-pointer"
+              className="min-h-[36px] px-2.5 py-1.5 rounded-xl bg-white/18 border border-white/25 text-[11px] font-bold text-white hover:bg-white/28 cursor-pointer"
             >
               Hari ini
             </button>
@@ -549,10 +549,10 @@ export const KalenderView: React.FC<KalenderViewProps> = ({
                 </p>
               ) : (
                 <>
-                  {/* Flat 3-Column KPI Metric Strip (hairline dividers, no nested boxes) */}
-                  <div className="grid grid-cols-3 divide-x divide-[#EEF2F6] py-1">
-                    <div className="px-2 text-center">
-                      <div className="text-lg font-extrabold text-[#101828] tabular-nums leading-tight">
+                  {/* Warm Soft-Tinted 3-Column KPI Tiles (borderless so zero nested-card feel) */}
+                  <div className="grid grid-cols-3 gap-2.5">
+                    <div className="rounded-2xl bg-[#F4F7FF] p-3 text-center">
+                      <div className="text-lg font-extrabold text-[#0F50BD] tabular-nums leading-tight">
                         {recapData.prayersTotal}
                         <span className="text-xs font-semibold text-[#475467]">
                           /{recapData.prayersPossible}
@@ -563,7 +563,7 @@ export const KalenderView: React.FC<KalenderViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="px-2 text-center">
+                    <div className="rounded-2xl bg-[#FFFBEB] p-3 text-center">
                       <div className="text-lg font-extrabold text-[#B45309] tabular-nums leading-tight">
                         {recapData.activeDays}
                         <span className="text-xs font-semibold text-[#475467]">
@@ -575,7 +575,7 @@ export const KalenderView: React.FC<KalenderViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="px-2 text-center">
+                    <div className="rounded-2xl bg-[#F0FDFA] p-3 text-center">
                       <div className="text-lg font-extrabold text-[#0F766E] tabular-nums leading-tight">
                         {recapData.tilawahPages}
                       </div>
@@ -612,8 +612,8 @@ export const KalenderView: React.FC<KalenderViewProps> = ({
                                   className={`w-full rounded-full transition-all duration-300 ${
                                     bar.hasAny
                                       ? isBarToday
-                                        ? 'bg-[#0F50BD]'
-                                        : 'bg-[#0F50BD]/75 group-hover:bg-[#0F50BD]'
+                                        ? 'bg-gradient-to-t from-[#0F50BD] to-[#14B8A6]'
+                                        : 'bg-[#0F50BD]/80 group-hover:bg-[#0F50BD]'
                                       : 'bg-[#CBD5E1]'
                                   }`}
                                   style={{ height: `${heightPct}%` }}
@@ -650,7 +650,7 @@ export const KalenderView: React.FC<KalenderViewProps> = ({
                             </span>
                             <div className="flex-1 h-2 rounded-full bg-[#EEF2F6] overflow-hidden">
                               <div
-                                className="h-full rounded-full bg-[#0F50BD] transition-all duration-300"
+                                className="h-full rounded-full bg-gradient-to-r from-[#0F50BD] to-[#14B8A6] transition-all duration-300"
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
@@ -683,9 +683,9 @@ export const KalenderView: React.FC<KalenderViewProps> = ({
                                   {stat.summaryLabel}
                                 </span>
                               </div>
-                              <div className="w-full h-1.5 rounded-full bg-[#EEF2F6] overflow-hidden">
+                              <div className="w-full h-2 rounded-full bg-[#EEF2F6] overflow-hidden">
                                 <div
-                                  className="h-full rounded-full bg-[#0F50BD]"
+                                  className="h-full rounded-full bg-gradient-to-r from-[#0F50BD] to-[#14B8A6]"
                                   style={{ width: `${pct}%` }}
                                 />
                               </div>

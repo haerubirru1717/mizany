@@ -26,6 +26,7 @@ const LOADING_PRAYERS: PrayerItem[] = [
 
 export const PrayerRow: React.FC<PrayerRowProps> = ({
   prayers = LOADING_PRAYERS,
+  city,
   onSelectPrayer,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
@@ -57,60 +58,66 @@ export const PrayerRow: React.FC<PrayerRowProps> = ({
   }, [nextPrayerId])
 
   const getIcon = (id: string, isNext?: boolean) => {
-    const cls = isNext ? 'text-[#5EEAD4]' : 'text-[#0F50BD]'
+    const cls = isNext ? 'text-[#FDE68A]' : 'text-[#D97706]'
     switch (id) {
       case 'subuh':
-        return <Sunrise size={15} className={cls} aria-hidden="true" />
+        return <Sunrise size={20} className={cls} aria-hidden="true" />
       case 'terbit':
-        return <SunDim size={15} className={cls} aria-hidden="true" />
+        return <SunDim size={20} className={cls} aria-hidden="true" />
       case 'dzuhur':
       case 'ashar':
-        return <Sun size={15} className={cls} aria-hidden="true" />
+        return <Sun size={20} className={cls} aria-hidden="true" />
       case 'maghrib':
-        return <Sunset size={15} className={cls} aria-hidden="true" />
+        return <Sunset size={20} className={cls} aria-hidden="true" />
       case 'isya':
       default:
-        return <Moon size={15} className={cls} aria-hidden="true" />
+        return <Moon size={20} className={cls} aria-hidden="true" />
     }
   }
 
   return (
-    <div
-      ref={scrollContainerRef}
-      className="flex gap-2 overflow-x-auto py-0.5 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0"
-      aria-label="Jadwal sholat hari ini"
-    >
-      {prayers.map((p) => (
-        <button
-          key={p.id}
-          ref={(el) => {
-            itemRefs.current[p.id] = el
-          }}
-          type="button"
-          onClick={() => onSelectPrayer?.(p)}
-          className={`flex-1 min-w-[70px] px-2.5 py-2 rounded-2xl border flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer active:scale-95 ${
-            p.isNext
-              ? 'bg-[#0F50BD] border-[#0F50BD] text-white shadow-sm'
-              : 'bg-white border-[#E2E8F0] text-[#101828] hover:border-[#CBD5E1]'
-          }`}
-        >
-          <div className="mb-0.5">{getIcon(p.id, p.isNext)}</div>
-          <span
-            className={`text-[11px] font-semibold leading-tight ${
-              p.isNext ? 'text-[#DBEAFE]' : 'text-[#475467]'
+    <section aria-label="Jadwal sholat hari ini">
+      <div className="flex items-center justify-between mb-2.5 px-1">
+        <h2 className="text-base font-bold text-[#101828]">Jadwal Sholat</h2>
+        {city && <span className="text-xs font-medium text-[#475467]">{city}</span>}
+      </div>
+
+      <div
+        ref={scrollContainerRef}
+        className="flex gap-2.5 overflow-x-auto pt-1 pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0"
+      >
+        {prayers.map((p) => (
+          <button
+            key={p.id}
+            ref={(el) => {
+              itemRefs.current[p.id] = el
+            }}
+            type="button"
+            onClick={() => onSelectPrayer?.(p)}
+            className={`flex-1 min-w-[78px] p-3 rounded-2xl flex flex-col items-center justify-center transition-all duration-200 cursor-pointer active:scale-95 ${
+              p.isNext
+                ? 'bg-[#0F50BD] text-white shadow-[0_6px_18px_rgba(15,80,189,0.3)] ring-2 ring-[#0F50BD]/25 scale-[1.03]'
+                : 'glass-card text-[#101828] hover:border-[#0F50BD]/25'
             }`}
           >
-            {p.name}
-          </span>
-          <span
-            className={`text-[13px] font-bold tabular-nums leading-tight ${
-              p.isNext ? 'text-white' : 'text-[#101828]'
-            }`}
-          >
-            {p.time}
-          </span>
-        </button>
-      ))}
-    </div>
+            <div className="mb-1.5">{getIcon(p.id, p.isNext)}</div>
+            <span
+              className={`text-xs font-semibold ${
+                p.isNext ? 'text-[#DBEAFE]' : 'text-[#475467]'
+              }`}
+            >
+              {p.name}
+            </span>
+            <span
+              className={`text-sm font-bold tabular-nums mt-0.5 ${
+                p.isNext ? 'text-white' : 'text-[#101828]'
+              }`}
+            >
+              {p.time}
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
   )
 }

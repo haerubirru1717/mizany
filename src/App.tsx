@@ -701,7 +701,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F7FB] relative">
+    <div className="min-h-screen bg-transparent relative">
       {/* Onboarding Overlay */}
       {showOnboarding && <Onboarding onComplete={handleCompleteOnboarding} />}
 
@@ -734,7 +734,7 @@ export default function App() {
           <div key={activeTab} className="view-enter">
             {/* VIEW: BERANDA */}
             {activeTab === 'beranda' && (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <HeroPrayer
                   city={city}
                   gregorianDate={prayerSchedule?.gregorianDate}
@@ -756,6 +756,7 @@ export default function App() {
                 <QuickActions
                   streakDays={streakDays}
                   last7DaysActive={last7DaysActive}
+                  onNavigate={(tab) => setActiveTab(tab)}
                   onScrollToChecklist={() => scrollToSection('checklist-section')}
                   onOpenStreak={() => setShowStreakModal(true)}
                 />

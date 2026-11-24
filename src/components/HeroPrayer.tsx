@@ -91,22 +91,25 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
     `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`
 
   return (
-    <section className="hero-flip-scene" aria-label="Ringkasan waktu sholat dan kalender Hijriah">
+    <section
+      className="-mx-4 -mt-[calc(12px+env(safe-area-inset-top))] hero-flip-scene"
+      aria-label="Ringkasan waktu sholat dan kalender Hijriah"
+    >
       <div className={`hero-flip-inner ${isFlipped ? 'is-flipped' : ''}`}>
         {/* ================= FRONT FACE: PRAYER HERO ================= */}
         <div
           aria-hidden={isFlipped}
-          className={`hero-flip-face relative overflow-hidden bg-gradient-to-b from-[#1941B5] to-[#0F50BD] text-white px-4 pt-4 pb-3.5 rounded-[22px] shadow-[0_8px_20px_rgba(25,65,181,0.16)] flex flex-col justify-between ${
+          className={`hero-flip-face relative overflow-hidden bg-gradient-to-b from-[#1941B5] to-[#0F50BD] text-white pt-[calc(18px+env(safe-area-inset-top))] px-5 pb-5 rounded-b-[28px] shadow-[0_10px_28px_rgba(25,65,181,0.22)] flex flex-col justify-between ${
             isFlipped ? 'pointer-events-none' : ''
           }`}
         >
           {/* Top row: Date/Location & Explicit Hijri Flip Pill */}
           <div className="flex items-start justify-between gap-2 relative z-10">
             <div className="min-w-0">
-              <div className="text-[14px] font-bold text-white leading-tight truncate">
+              <div className="text-[15px] font-bold text-white leading-tight truncate">
                 {displayHijriDate}
               </div>
-              <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#DBEAFE] leading-tight mt-1">
+              <div className="flex items-center gap-1.5 text-[12.5px] font-medium text-[#DBEAFE] leading-tight mt-1">
                 <span className="shrink-0">{displayGregorianDate}</span>
                 <span aria-hidden="true">·</span>
                 <span className="inline-flex items-center gap-1 min-w-0">
@@ -120,7 +123,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
               type="button"
               tabIndex={isFlipped ? -1 : 0}
               onClick={() => setIsFlipped(true)}
-              className="shrink-0 min-h-[36px] px-3 py-1.5 rounded-xl bg-white/15 border border-white/25 text-white text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/25 active:scale-95 transition-all cursor-pointer"
+              className="shrink-0 min-h-[38px] px-3 py-1.5 rounded-xl bg-white/18 border border-white/30 backdrop-blur-sm text-white text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/25 active:scale-95 transition-all cursor-pointer"
               aria-label="Balik kartu ke ringkasan Kalender Hijriah"
             >
               <CalendarDays size={14} aria-hidden="true" />
@@ -128,40 +131,40 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
             </button>
           </div>
 
-          {/* Subtle mosque horizon accent (Beranda Hero only) */}
-          <div className="absolute inset-x-0 bottom-0 pointer-events-none opacity-[0.12]">
-            <MosqueSkyline className="w-full h-auto max-h-[96px]" />
+          {/* Mosque Skyline Horizon */}
+          <div className="absolute inset-x-0 bottom-0 pointer-events-none opacity-30">
+            <MosqueSkyline className="w-full h-auto max-h-[135px]" />
           </div>
 
-          {/* Compact Semicircular Arc Gauge */}
-          <div className="relative z-10 mt-1 max-w-[244px] mx-auto w-full">
+          {/* Wide Lush Semicircular Arc Gauge */}
+          <div className="relative z-10 mt-0.5 max-w-[304px] mx-auto w-full">
             <div className="relative">
               <svg
-                viewBox="0 0 300 164"
-                className="w-full h-auto"
+                viewBox="0 0 300 168"
+                className="w-full h-auto drop-shadow-sm"
                 fill="none"
                 aria-hidden="true"
               >
                 <defs>
                   <linearGradient id="heroGrad" x1="0" y1="0" x2="1" y2="0">
                     <stop offset="0%" stopColor="#93C5FD" />
-                    <stop offset="55%" stopColor="#2DD4BF" />
+                    <stop offset="55%" stopColor="#14B8A6" />
                     <stop offset="100%" stopColor="#5EEAD4" />
                   </linearGradient>
                 </defs>
                 {/* Base empty track */}
                 <path
-                  d="M28 152 A122 122 0 0 1 272 152"
+                  d="M28 156 A122 122 0 0 1 272 156"
                   stroke="rgba(255, 255, 255, 0.22)"
-                  strokeWidth="16"
+                  strokeWidth="17"
                   strokeLinecap="round"
                 />
-                {/* Calm live progress track */}
+                {/* Live progress track */}
                 {showActiveStroke && (
                   <path
-                    d="M28 152 A122 122 0 0 1 272 152"
+                    d="M28 156 A122 122 0 0 1 272 156"
                     stroke="url(#heroGrad)"
-                    strokeWidth="16"
+                    strokeWidth="17"
                     strokeLinecap="round"
                     strokeDasharray={ARC_LENGTH}
                     strokeDashoffset={animatedOffset}
@@ -171,16 +174,17 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
               </svg>
 
               {/* Text inside arc */}
-              <div className="absolute inset-x-0 bottom-0.5 text-center pointer-events-none flex flex-col items-center">
-                <div className="text-[26px] font-extrabold tracking-tight leading-tight text-white">
+              <div className="absolute inset-x-0 bottom-1 text-center pointer-events-none flex flex-col items-center">
+                <div className="text-3xl font-extrabold tracking-tight leading-tight text-white">
                   {prayerLoadFailed ? 'Jadwal Offline' : nextPrayerName || 'Memuat...'}
                 </div>
-                <div className="text-xs font-medium text-[#DBEAFE] mt-0.5 tabular-nums">
+                <div className="text-xs sm:text-sm font-medium text-[#DBEAFE] mt-0.5 tabular-nums">
                   {prayerLoadFailed ? (
                     'Gagal terhubung ke Kemenag RI'
                   ) : (
                     <>
-                      Pukul <span className="font-bold text-white">{nextPrayerTime || '--:--'}</span>
+                      Sisa waktu · pukul{' '}
+                      <span className="font-semibold text-white">{nextPrayerTime || '--:--'}</span>
                     </>
                   )}
                 </div>
@@ -189,13 +193,13 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
                     type="button"
                     tabIndex={isFlipped ? -1 : 0}
                     onClick={onRetryPrayer}
-                    className="pointer-events-auto mt-1.5 px-3 py-1 rounded-full bg-white text-[#0F50BD] text-xs font-bold inline-flex items-center gap-1 cursor-pointer hover:bg-blue-50"
+                    className="pointer-events-auto mt-2 px-3.5 py-1 rounded-full bg-white text-[#0F50BD] text-xs font-bold inline-flex items-center gap-1 cursor-pointer hover:bg-blue-50 shadow-sm"
                   >
                     <RefreshCw size={12} />
                     <span>Muat Ulang</span>
                   </button>
                 ) : (
-                  <span className="inline-block mt-1.5 px-3 py-0.5 bg-white/15 border border-white/25 rounded-full text-xs font-bold tracking-wider tabular-nums text-white">
+                  <span className="inline-block mt-2 px-3.5 py-1 bg-white/20 border border-white/30 backdrop-blur-sm rounded-full text-xs font-bold tracking-wider tabular-nums text-white">
                     {remainingTime || '--:--:--'}
                   </span>
                 )}
@@ -203,14 +207,14 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
             </div>
 
             {/* Start -> End cycle endpoints */}
-            <div className="mt-1 px-1 flex items-center justify-between text-[11px] leading-tight">
-              <div className="flex items-center gap-1.5">
+            <div className="mt-1.5 px-1.5 flex items-center justify-between text-[11px] leading-tight">
+              <div className="flex flex-col items-start">
                 <span className="font-semibold text-white">{currentPrayerName || '--'}</span>
                 <span className="font-medium text-[#DBEAFE] tabular-nums">
                   {currentPrayerTime || '--:--'}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-col items-end">
                 <span className="font-semibold text-white">{nextPrayerName || '--'}</span>
                 <span className="font-semibold text-[#5EEAD4] tabular-nums">
                   {nextPrayerTime || '--:--'}
@@ -220,9 +224,9 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
           </div>
 
           {/* Live Clock Strip & Full Schedule Link */}
-          <div className="relative z-10 mt-2.5 pt-2.5 border-t border-white/15 flex items-center justify-between text-xs text-white">
+          <div className="relative z-10 mt-3 pt-3 border-t border-white/15 flex items-center justify-between text-xs text-white">
             <div className="flex items-center gap-1.5 tabular-nums">
-              <Clock size={14} className="text-[#DBEAFE]" aria-hidden="true" />
+              <Clock size={15} className="text-[#DBEAFE]" aria-hidden="true" />
               <span className="font-semibold">
                 {displayCurrentTime}
                 {tzLabel ? ` ${tzLabel}` : ''}
@@ -245,17 +249,17 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
         {/* ================= BACK FACE: KALENDER HIJRIAH (MABIMS) ================= */}
         <div
           aria-hidden={!isFlipped}
-          className={`hero-flip-face hero-flip-back relative overflow-hidden bg-gradient-to-b from-[#1941B5] to-[#0F50BD] text-white px-4 pt-4 pb-3.5 rounded-[22px] shadow-[0_8px_20px_rgba(25,65,181,0.16)] flex flex-col justify-between ${
+          className={`hero-flip-face hero-flip-back relative overflow-hidden bg-gradient-to-b from-[#1941B5] to-[#0F50BD] text-white pt-[calc(18px+env(safe-area-inset-top))] px-5 pb-5 rounded-b-[28px] shadow-[0_10px_28px_rgba(25,65,181,0.22)] flex flex-col justify-between ${
             !isFlipped ? 'pointer-events-none' : ''
           }`}
         >
           {/* Top row: Hijri Header & Explicit Flip Back Button */}
           <div className="flex items-start justify-between gap-2 relative z-10">
             <div className="min-w-0">
-              <div className="text-[14px] font-bold text-white leading-tight">
+              <div className="text-[15px] font-bold text-white leading-tight">
                 Kalender Hijriah
               </div>
-              <div className="text-[12px] font-medium text-[#DBEAFE] leading-tight mt-1 truncate">
+              <div className="text-[12.5px] font-medium text-[#DBEAFE] leading-tight mt-1 truncate">
                 {hijriData
                   ? `${hijriData.today.monthName} ${hijriData.today.year} H · ${hijriData.monthCount} hari`
                   : displayHijriDate}
@@ -266,7 +270,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
               type="button"
               tabIndex={isFlipped ? 0 : -1}
               onClick={() => setIsFlipped(false)}
-              className="shrink-0 min-h-[36px] px-3 py-1.5 rounded-xl bg-white/15 border border-white/25 text-white text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/25 active:scale-95 transition-all cursor-pointer"
+              className="shrink-0 min-h-[38px] px-3 py-1.5 rounded-xl bg-white/18 border border-white/30 backdrop-blur-sm text-white text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/25 active:scale-95 transition-all cursor-pointer"
               aria-label="Kembali ke hitung mundur waktu sholat"
             >
               <RotateCw size={14} aria-hidden="true" />
@@ -274,15 +278,20 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
             </button>
           </div>
 
+          {/* Mosque Skyline Horizon */}
+          <div className="absolute inset-x-0 bottom-0 pointer-events-none opacity-25">
+            <MosqueSkyline className="w-full h-auto max-h-[135px]" />
+          </div>
+
           {/* Center: Today Hijri Highlight + 7-Day MABIMS Strip + Next Event */}
-          <div className="relative z-10 my-auto py-2 flex flex-col items-center text-center">
+          <div className="relative z-10 my-auto py-3 flex flex-col items-center text-center">
             {hijriData ? (
               <>
                 <div className="flex items-baseline justify-center gap-2">
-                  <span className="text-3xl font-extrabold tracking-tight leading-none tabular-nums">
+                  <span className="text-4xl font-extrabold tracking-tight leading-none tabular-nums">
                     {hijriData.today.day}
                   </span>
-                  <span className="text-base font-bold text-white leading-none">
+                  <span className="text-lg font-bold text-white leading-none">
                     {hijriData.today.monthName}
                   </span>
                   <span className="text-xs font-semibold text-[#DBEAFE]">
@@ -296,7 +305,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
 
                 {/* 7-Day Week Strip (Big Masehi + Arabic-Indic Hijri >=11px) */}
                 {hijriData.weekStrip.length > 0 && (
-                  <div className="grid grid-cols-7 gap-1 w-full mt-3">
+                  <div className="grid grid-cols-7 gap-1.5 w-full max-w-[330px] mt-3.5">
                     {hijriData.weekStrip.map((d) => {
                       const gregDay = Number(String(d.gregorian || '').split('-')[2]) || d.day
                       return (
@@ -304,8 +313,8 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
                           key={d.hijri}
                           className={`py-1.5 px-0.5 rounded-xl flex flex-col items-center justify-center ${
                             d.isToday
-                              ? 'bg-white text-[#0F50BD] font-bold'
-                              : 'bg-white/12 text-white border border-white/15'
+                              ? 'bg-white text-[#0F50BD] shadow-sm font-bold'
+                              : 'bg-white/14 text-white border border-white/18'
                           }`}
                         >
                           <span
@@ -323,7 +332,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
                             >
                               {toArabicIndic(d.day)}
                             </span>
-                            <span className="text-xs font-bold tabular-nums">{gregDay}</span>
+                            <span className="text-[13px] font-bold tabular-nums">{gregDay}</span>
                           </div>
                         </div>
                       )
@@ -333,7 +342,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
 
                 {/* Nearest Islamic Event */}
                 {hijriData.nextEvent && (
-                  <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 border border-white/25 text-xs font-semibold text-white">
+                  <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/18 border border-white/25 text-xs font-semibold text-white">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#5EEAD4]" aria-hidden="true" />
                     <span>{hijriData.nextEvent.name}</span>
                     <span className="text-[#DBEAFE]" aria-hidden="true">·</span>
@@ -346,15 +355,15 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
                 )}
               </>
             ) : (
-              <div className="py-5 text-center">
-                <div className="text-xl font-bold">{displayHijriDate}</div>
+              <div className="py-6 text-center">
+                <div className="text-2xl font-extrabold">{displayHijriDate}</div>
                 <div className="text-xs text-[#DBEAFE] mt-1">Memuat kalender Neo MABIMS...</div>
               </div>
             )}
           </div>
 
           {/* Bottom Strip */}
-          <div className="relative z-10 mt-2 pt-2.5 border-t border-white/15 flex items-center justify-between text-xs text-white">
+          <div className="relative z-10 mt-2 pt-3 border-t border-white/15 flex items-center justify-between text-xs text-white">
             <div className="flex items-center gap-1.5 text-[#DBEAFE]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#5EEAD4]" aria-hidden="true" />
               <span>Neo MABIMS · Kemenag RI</span>

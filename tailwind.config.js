@@ -19,17 +19,17 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['"Figtree"', 'system-ui', '-apple-system', 'sans-serif'],
-        poppins: ['"Figtree"', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['"Poppins"', 'system-ui', '-apple-system', 'sans-serif'],
+        poppins: ['"Poppins"', 'system-ui', '-apple-system', 'sans-serif'],
         arabic: ['"Noto Naskh Arabic"', 'serif'],
       },
       boxShadow: {
-        glass: '0 1px 2px rgba(16,24,40,.04), 0 4px 12px rgba(16,24,40,.03)',
-        'glass-sm': '0 1px 2px rgba(16,24,40,.04)',
-        floating: '0 10px 28px rgba(16,24,40,.10), 0 2px 6px rgba(16,24,40,.05)',
+        glass: '0 6px 20px rgba(25,65,181,.06), 0 1px 4px rgba(16,24,40,.04)',
+        'glass-sm': '0 3px 10px rgba(25,65,181,.05), 0 1px 2px rgba(16,24,40,.03)',
+        floating: '0 10px 30px rgba(16,24,40,.13), 0 2px 6px rgba(16,24,40,.06)',
       },
       borderRadius: {
-        'mizany': '18px',
+        'mizany': '20px',
       }
     },
   },

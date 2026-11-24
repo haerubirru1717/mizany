@@ -208,10 +208,10 @@ export const AmalChecklist: React.FC<AmalChecklistProps> = ({
           </span>
         </div>
 
-        {/* Clean Progress Bar */}
-        <div className="w-full h-1.5 rounded-full bg-[#EEF2F6] overflow-hidden mt-3">
+        {/* Plush Gradient Progress Bar */}
+        <div className="w-full h-2 rounded-full bg-[#EEF2F6] overflow-hidden mt-3">
           <div
-            className="h-full bg-[#0F50BD] rounded-full transition-all duration-300 ease-out"
+            className="h-full bg-gradient-to-r from-[#0F50BD] to-[#14B8A6] rounded-full transition-all duration-300 ease-out"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -231,7 +231,7 @@ export const AmalChecklist: React.FC<AmalChecklistProps> = ({
                 setExpandedItemId(null)
                 onChangeDate(todayIso)
               }}
-              className="px-3 py-1.5 rounded-lg bg-[#0F50BD] text-white text-[11px] font-bold hover:bg-[#1941B5] cursor-pointer shrink-0 transition-colors"
+              className="px-3 py-1.5 rounded-full bg-[#0F50BD] text-white text-[11px] font-bold hover:bg-[#1941B5] cursor-pointer shrink-0 transition-colors"
             >
               Ke Hari Ini
             </button>
@@ -258,17 +258,17 @@ export const AmalChecklist: React.FC<AmalChecklistProps> = ({
             return (
               <div
                 key={item.id}
-                className={`px-4 py-3.5 transition-colors ${isDone ? 'bg-[#F5F9FF]' : 'bg-white'}`}
+                className={`px-4 py-4 transition-colors ${isDone ? 'bg-[#F5F9FF]' : 'bg-white'}`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] flex items-center justify-center shrink-0">
                     {renderIcon(item.icon)}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span
-                        className={`text-sm font-bold leading-tight ${
+                        className={`text-[14.5px] font-bold leading-tight ${
                           isDone ? 'text-[#0F50BD]' : 'text-[#101828]'
                         }`}
                       >
@@ -295,8 +295,8 @@ export const AmalChecklist: React.FC<AmalChecklistProps> = ({
                   </span>
                 </div>
 
-                {/* 5 individual prayer toggle buttons (>= 11.5px text, generous hit targets) */}
-                <div className="grid grid-cols-5 gap-1.5 mt-3">
+                {/* 5 individual prayer toggle buttons (>= 11px text, plush active shadow) */}
+                <div className="grid grid-cols-5 gap-1.5 mt-3.5">
                   {MANDATORY_PRAYERS.map((p) => {
                     const checked = Boolean(checks[p.key])
                     return (
@@ -305,9 +305,9 @@ export const AmalChecklist: React.FC<AmalChecklistProps> = ({
                         type="button"
                         onClick={() => onTogglePrayer(p.key)}
                         aria-pressed={checked}
-                        className={`min-h-[52px] py-2 px-1 rounded-xl border text-center flex flex-col items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 ${
+                        className={`min-h-[54px] py-2 px-1 rounded-xl border text-center flex flex-col items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 ${
                           checked
-                            ? 'bg-[#0F50BD] border-[#0F50BD] text-white'
+                            ? 'bg-[#0F50BD] border-[#0F50BD] text-white shadow-[0_3px_10px_rgba(15,80,189,0.28)]'
                             : 'bg-[#F8FAFC] border-[#E2E8F0] text-[#334155] hover:border-[#0F50BD]/40 hover:text-[#101828]'
                         }`}
                       >

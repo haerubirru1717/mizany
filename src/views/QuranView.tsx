@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Minus, Bookmark, Link2, Check } from 'lucide-react'
+import { MosqueSkyline } from '../components/MosqueSkyline'
 
 interface QuranViewProps {
   dailyTarget: number
@@ -68,28 +69,34 @@ export const QuranView: React.FC<QuranViewProps> = ({
         )}
       </div>
 
-      {/* Quiet Editorial Khatam Progress Card */}
-      <div className="glass-card p-5">
-        <div className="flex items-baseline justify-between gap-2">
-          <div className="text-3xl font-extrabold text-[#101828] tabular-nums tracking-tight">
-            {completedJuz}{' '}
-            <span className="text-base font-semibold text-[#475467]">/ 30 Juz</span>
-          </div>
-          <span className="px-2.5 py-1 rounded-full bg-[#EFF6FF] text-[#0F50BD] text-xs font-bold tabular-nums">
-            {khatamCycle > 1 ? `Khatam ke-${khatamCycle} · ` : ''}
-            {khatamPercent}%
-          </span>
+      {/* Rich Tazkirah Blue Khatam Progress Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#0F50BD] to-[#1941B5] text-white p-5 rounded-[22px] shadow-[0_8px_24px_rgba(25,65,181,0.2)]">
+        <div className="absolute inset-x-0 bottom-0 pointer-events-none opacity-20">
+          <MosqueSkyline className="w-full h-auto max-h-[84px]" />
         </div>
 
-        <p className="text-xs text-[#475467] mt-1 tabular-nums">
-          {displayPages} dari {TOTAL_MUSHAF_PAGES} halaman Mushaf
-        </p>
+        <div className="relative z-10">
+          <div className="flex items-baseline justify-between gap-2">
+            <div className="text-3xl font-extrabold text-white tabular-nums tracking-tight">
+              {completedJuz}{' '}
+              <span className="text-base font-semibold text-[#DBEAFE]">/ 30 Juz</span>
+            </div>
+            <span className="px-2.5 py-1 rounded-full bg-white/18 border border-white/25 text-white text-xs font-bold tabular-nums">
+              {khatamCycle > 1 ? `Khatam ke-${khatamCycle} · ` : ''}
+              {khatamPercent}%
+            </span>
+          </div>
 
-        <div className="w-full h-2 rounded-full bg-[#EEF2F6] overflow-hidden mt-3.5">
-          <div
-            className="h-full bg-[#0F50BD] rounded-full transition-all duration-300"
-            style={{ width: `${khatamPercent}%` }}
-          />
+          <p className="text-xs text-[#DBEAFE] font-medium mt-1 tabular-nums">
+            {displayPages} dari {TOTAL_MUSHAF_PAGES} halaman Mushaf
+          </p>
+
+          <div className="w-full h-2.5 rounded-full bg-white/20 overflow-hidden mt-3.5">
+            <div
+              className="h-full bg-gradient-to-r from-[#5EEAD4] to-[#14B8A6] rounded-full transition-all duration-300"
+              style={{ width: `${khatamPercent}%` }}
+            />
+          </div>
         </div>
       </div>
 
@@ -123,7 +130,7 @@ export const QuranView: React.FC<QuranViewProps> = ({
           <button
             type="button"
             onClick={() => onChangePagesToday(pagesReadToday + 1)}
-            className="w-12 h-12 rounded-2xl bg-[#0F50BD] text-white flex items-center justify-center hover:bg-[#1941B5] active:scale-95 transition-all cursor-pointer"
+            className="w-12 h-12 rounded-2xl bg-[#0F50BD] text-white shadow-[0_4px_12px_rgba(15,80,189,0.28)] flex items-center justify-center hover:bg-[#1941B5] active:scale-95 transition-all cursor-pointer"
             aria-label="Tambah 1 halaman"
           >
             <Plus size={20} strokeWidth={2.5} />

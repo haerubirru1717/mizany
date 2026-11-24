@@ -392,7 +392,7 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
       onContextMenu={(e) => e.preventDefault()}
       onKeyDown={handleSurfaceKeyDown}
       style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
-      className="fixed inset-0 z-30 flex flex-col justify-between overflow-hidden select-none touch-none cursor-pointer bg-[#F4F7FB]"
+      className="fixed inset-0 z-30 flex flex-col justify-between overflow-hidden select-none touch-none cursor-pointer bg-gradient-to-b from-[#F2F6FF] via-white to-[#F4F8FF]"
     >
       {/* Touch-point ripple feedback */}
       {ripple && (
@@ -697,12 +697,22 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
             showControls ? 'w-56 h-56' : 'w-64 h-64'
           } ${isPressed ? 'scale-[0.95]' : 'scale-100'}`}
         >
-          <svg className="w-full h-full -rotate-90" viewBox="0 0 240 240" aria-hidden="true">
+          <svg
+            className="w-full h-full -rotate-90 drop-shadow-[0_10px_28px_rgba(15,80,189,0.12)]"
+            viewBox="0 0 240 240"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient id="tasbihGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#0F50BD" />
+                <stop offset="100%" stopColor="#14B8A6" />
+              </linearGradient>
+            </defs>
             <circle
               cx="120"
               cy="120"
               r={radius}
-              stroke="#E2E8F0"
+              stroke="#E2EBFA"
               strokeWidth="12"
               fill="#FFFFFF"
             />
@@ -710,7 +720,7 @@ export const TasbihView: React.FC<TasbihViewProps> = ({ onBack }) => {
               cx="120"
               cy="120"
               r={radius}
-              stroke="#0F50BD"
+              stroke="url(#tasbihGrad)"
               strokeWidth="12"
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}

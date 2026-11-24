@@ -52,15 +52,15 @@ export const PrayerView: React.FC<PrayerViewProps> = ({ city, prayerSchedule, on
         </div>
       </div>
 
-      {/* Quiet Next Prayer Summary Card */}
-      <div className="glass-card p-5 flex items-center justify-between gap-3">
+      {/* Rich Tazkirah Blue Next Prayer Highlight Card */}
+      <div className="bg-gradient-to-r from-[#0F50BD] to-[#1941B5] text-white p-5 rounded-[22px] shadow-[0_8px_24px_rgba(25,65,181,0.2)] flex items-center justify-between gap-3">
         <div>
-          <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#EFF6FF] text-[#0F50BD] text-xs font-bold">
+          <span className="inline-block px-2.5 py-0.5 rounded-full bg-white/18 border border-white/25 text-white text-xs font-bold">
             {nextName} berikutnya
           </span>
-          <p className="text-xs text-[#475467] mt-2">{nextRemaining}</p>
+          <p className="text-xs text-[#DBEAFE] font-medium mt-2">{nextRemaining}</p>
         </div>
-        <div className="text-3xl font-extrabold text-[#0F50BD] tabular-nums tracking-tight shrink-0">
+        <div className="text-3xl font-extrabold text-white tabular-nums tracking-tight shrink-0">
           {nextTime}
         </div>
       </div>
