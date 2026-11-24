@@ -171,26 +171,7 @@ export const KalenderView: React.FC<KalenderViewProps> = ({ hijriData }) => {
 
   return (
     <div className="space-y-4 pb-24">
-      {/* Page Title */}
-      <div className="flex items-end justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold text-[#101828]">Kalender</h1>
-          <p className="text-xs text-[#525252] mt-0.5">
-            Masehi &amp; Hijriah resmi Neo MABIMS · Kemenag RI
-          </p>
-        </div>
-        {!isCurrentMonth && (
-          <button
-            type="button"
-            onClick={handleJumpToday}
-            className="px-3 py-1.5 rounded-full bg-[#0F50BD]/10 text-[#0F50BD] text-[11px] font-bold hover:bg-[#0F50BD]/20 cursor-pointer transition-colors shrink-0"
-          >
-            Hari Ini
-          </button>
-        )}
-      </div>
-
-      {/* Top Active Date Banner (like NU Online header, in Tazkirah Blue) */}
+      {/* Top Active Date Banner (like reference header, in Tazkirah Blue) */}
       <div className="bg-gradient-to-r from-[#0F50BD] to-[#1941B5] text-white p-4 rounded-[20px] shadow-[0_8px_22px_rgba(25,65,181,0.2)] flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center shrink-0">
@@ -206,7 +187,7 @@ export const KalenderView: React.FC<KalenderViewProps> = ({ hijriData }) => {
           </div>
         </div>
 
-        {selectedDay && !selectedDay.isToday && (
+        {(!isCurrentMonth || (selectedDay && !selectedDay.isToday)) && (
           <button
             type="button"
             onClick={handleJumpToday}
