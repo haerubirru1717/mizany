@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { MosqueSkyline } from './MosqueSkyline'
 import { HijriHeroData, toArabicIndic } from '../services/hijriService'
+import type { RamadanContext, RamadanPhaseInfo } from '../utils/ramadan'
 import {
   MapPin,
   Clock,
@@ -10,6 +11,7 @@ import {
   RefreshCw,
   BellRing,
   BellOff,
+  Moon,
 } from 'lucide-react'
 
 const ARC_LENGTH = 383.27 // Exact semicircle length for r=122 (Math.PI * 122)
@@ -29,6 +31,8 @@ interface HeroPrayerProps {
   prayerLoadFailed?: boolean
   reminderEnabled?: boolean
   reminderActiveCount?: number
+  ramadan?: RamadanContext
+  ramadanPhase?: RamadanPhaseInfo | null
   onToggleReminder?: () => void
   onRetryPrayer?: () => void
   onOpenPrayerDetail?: () => void
@@ -50,6 +54,8 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
   prayerLoadFailed,
   reminderEnabled = false,
   reminderActiveCount = 0,
+  ramadan,
+  ramadanPhase,
   onToggleReminder,
   onRetryPrayer,
   onOpenPrayerDetail,
@@ -337,6 +343,45 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Ramadan Highlight Strip: Day badge + Imsak & Berbuka + live phase countdown */}
+          {ramadan?.isActive && (
+            <div className="relative z-10 mt-3 rounded-2xl bg-white/14 border border-white/22 backdrop-blur-sm px-3.5 py-2.5 pointer-events-none">
+              <div className="flex items-center justify-between gap-2">
+                <div className="inline-flex items-center gap-1.5 min-w-0">
+                  <Moon size={13} className="text-[#5EEAD4] shrink-0" aria-hidden="true" />
+                  <span className="text-xs font-bold text-white whitespace-nowrap">
+                    {ramadan.isLastTenNights
+                      ? `10 Malam · Hari ${ramadan.dayOfRamadan}`
+                      : `Ramadan Hari ${ramadan.dayOfRamadan}`}
+                  </span>
+                  {ramadan.isPreview && (
+                    <span className="text-[11px] font-medium text-[#DBEAFE] shrink-0">
+                      (Pratinjau)
+                    </span>
+                  )}
+                </div>
+                {ramadanPhase && (
+                  <span className="text-[11px] font-bold text-[#5EEAD4] tabular-nums shrink-0 whitespace-nowrap">
+                    {ramadanPhase.targetLabel} · {ramadanPhase.countdown}
+                  </span>
+                )}
+              </div>
+
+              {ramadanPhase && (
+                <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-white/15 text-xs">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[#DBEAFE] font-medium">Imsak</span>
+                    <span className="font-bold text-white tabular-nums">{ramadanPhase.imsakTime}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-1 pl-2 border-l border-white/15">
+                    <span className="text-[#DBEAFE] font-medium">Berbuka</span>
+                    <span className="font-bold text-[#5EEAD4] tabular-nums">{ramadanPhase.maghribTime}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Live Clock Strip & Full Schedule Link */}
           <div className="relative z-10 mt-3 pt-3 border-t border-white/15 flex items-center justify-between text-xs text-white pointer-events-none">

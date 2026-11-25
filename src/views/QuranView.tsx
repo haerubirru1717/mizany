@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Plus, Minus, Bookmark, Link2, Check, ExternalLink } from 'lucide-react'
+import { Plus, Minus, Bookmark, Link2, Check, ExternalLink, Moon } from 'lucide-react'
 import { MosqueSkyline } from '../components/MosqueSkyline'
 import {
   SURAHS,
@@ -12,6 +12,7 @@ import {
   locateAyah,
   kemenagReaderUrl,
 } from '../data/quranMeta'
+import { computeKhatamPagesPerDay, type RamadanContext } from '../utils/ramadan'
 
 interface QuranViewProps {
   dailyTarget: number
@@ -20,6 +21,7 @@ interface QuranViewProps {
   last7Pages?: { iso: string; pages: number }[]
   hijriDateLabel?: string
   linkedAmalName?: string
+  ramadan?: RamadanContext
   onChangePagesToday: (nextPages: number) => void
   onChangeDailyTarget?: (nextTarget: number) => void
   onAddToChecklist?: () => void
@@ -60,6 +62,7 @@ export const QuranView: React.FC<QuranViewProps> = ({
   last7Pages,
   hijriDateLabel,
   linkedAmalName,
+  ramadan,
   onChangePagesToday,
   onChangeDailyTarget,
   onAddToChecklist,
@@ -465,6 +468,71 @@ export const QuranView: React.FC<QuranViewProps> = ({
                 </button>
               )}
             </div>
+          </div>
+        )}
+        {/* Ramadan 30-day Khatam Pace Calculator */}
+        {ramadan?.isActive && onChangeDailyTarget && (
+          <div className="mt-3.5 pt-3.5 border-t border-[#EEF2F6] space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0F50BD]">
+                <Moon size={13} aria-hidden="true" />
+                <span>Target Khatam Ramadan</span>
+              </div>
+              <span className="text-[11px] font-semibold text-[#475467] tabular-nums">
+                Sisa {ramadan.daysRemaining} hari
+              </span>
+            </div>
+
+            {(() => {
+              const remainingForKhatam = cycleComplete ? TOTAL_MUSHAF_PAGES : pagesToKhatam
+              const chaseTarget = computeKhatamPagesPerDay(remainingForKhatam, ramadan.daysRemaining)
+              const ramadanPlans = [
+                {
+                  key: 'chase',
+                  label: 'Sesuai sisa hari',
+                  pages: chaseTarget,
+                },
+                {
+                  key: '1x',
+                  label: '1× Khatam',
+                  pages: 20,
+                },
+                {
+                  key: '2x',
+                  label: '2× Khatam',
+                  pages: 40,
+                },
+              ]
+              return (
+                <div className="grid grid-cols-3 gap-1.5">
+                  {ramadanPlans.map((plan) => {
+                    const active = dailyTarget === plan.pages
+                    return (
+                      <button
+                        key={plan.key}
+                        type="button"
+                        onClick={() => onChangeDailyTarget(plan.pages)}
+                        aria-pressed={active}
+                        className={`min-h-[48px] px-2 py-2 rounded-xl border text-center flex flex-col items-center justify-center transition-colors cursor-pointer ${
+                          active
+                            ? 'bg-[#0F50BD] border-[#0F50BD] text-white'
+                            : 'bg-[#F5F9FF] border-[#DBEAFE] text-[#101828] hover:bg-[#EFF6FF]'
+                        }`}
+                      >
+                        <span className="text-[11px] font-semibold leading-tight">{plan.label}</span>
+                        <span
+                          className={`text-xs font-extrabold tabular-nums mt-0.5 ${
+                            active ? 'text-[#5EEAD4]' : 'text-[#0F50BD]'
+                          }`}
+                        >
+                          {plan.pages} hal/hr
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            })()}
           </div>
         )}
       </div>

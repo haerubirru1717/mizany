@@ -8,6 +8,8 @@ import {
   Volume2,
   VolumeX,
   Send,
+  Moon,
+  Sunset,
 } from 'lucide-react'
 import { MandatoryPrayerKey } from '../types'
 import { PrayerSchedule } from '../services/prayerService'
@@ -16,17 +18,21 @@ import {
   PrayerReminderSettings,
   REMINDER_LEAD_OPTIONS,
   ReminderLeadMinutes,
+  ReminderPrayerId,
   countActiveReminderPrayers,
   formatLeadLabel,
 } from '../services/reminderService'
+import type { RamadanContext, RamadanPhaseInfo } from '../utils/ramadan'
 
 interface PrayerViewProps {
   city: string
   prayerSchedule?: PrayerSchedule | null
   reminderSettings: PrayerReminderSettings
   notificationPermission: NotificationPermissionState
+  ramadan?: RamadanContext
+  ramadanPhase?: RamadanPhaseInfo | null
   onToggleMasterReminder: () => void
-  onTogglePrayerReminder: (prayerId: MandatoryPrayerKey) => void
+  onTogglePrayerReminder: (prayerId: ReminderPrayerId) => void
   onChangeLeadMinutes: (minutes: ReminderLeadMinutes) => void
   onToggleReminderSound: () => void
   onTestReminder: () => void
@@ -40,6 +46,8 @@ export const PrayerView: React.FC<PrayerViewProps> = ({
   prayerSchedule,
   reminderSettings,
   notificationPermission,
+  ramadan,
+  ramadanPhase,
   onToggleMasterReminder,
   onTogglePrayerReminder,
   onChangeLeadMinutes,
@@ -49,7 +57,9 @@ export const PrayerView: React.FC<PrayerViewProps> = ({
 }) => {
   const t = prayerSchedule?.timings
   const nextId = prayerSchedule?.nextPrayer?.id
-  const activeCount = countActiveReminderPrayers(reminderSettings)
+  const includeImsak = Boolean(ramadan?.isActive)
+  const activeCount = countActiveReminderPrayers(reminderSettings, includeImsak)
+  const totalReminderSlots = includeImsak ? 6 : 5
   const isMasterActive = reminderSettings.enabled && activeCount > 0
 
   const prayerDetails = [
@@ -105,13 +115,58 @@ export const PrayerView: React.FC<PrayerViewProps> = ({
         </div>
       </div>
 
+      {/* Ramadan Imsak & Berbuka Highlight Tiles */}
+      {ramadan?.isActive && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="glass-card-sm p-4">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#475467]">
+              <span className="w-7 h-7 rounded-lg bg-[#EFF6FF] text-[#0F50BD] flex items-center justify-center shrink-0">
+                <Moon size={14} aria-hidden="true" />
+              </span>
+              <span>Imsak</span>
+            </div>
+            <div className="text-2xl font-extrabold text-[#101828] tabular-nums mt-2">
+              {t?.imsak || '--:--'}
+            </div>
+            <p className="text-[11px] font-medium text-[#475467] mt-0.5">
+              {ramadanPhase?.phase === 'sahur'
+                ? `Menuju Imsak · ${ramadanPhase.countdown}`
+                : 'Batas akhir sahur'}
+            </p>
+          </div>
+          <div className="glass-card-sm p-4">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#475467]">
+              <span className="w-7 h-7 rounded-lg bg-[#F0FDFA] text-[#0F766E] flex items-center justify-center shrink-0">
+                <Sunset size={14} aria-hidden="true" />
+              </span>
+              <span>Berbuka</span>
+            </div>
+            <div className="text-2xl font-extrabold text-[#0F766E] tabular-nums mt-2">
+              {t?.maghrib || '--:--'}
+            </div>
+            <p className="text-[11px] font-medium text-[#475467] mt-0.5 tabular-nums">
+              {ramadanPhase?.phase === 'puasa'
+                ? `Menuju berbuka · ${ramadanPhase.countdown}`
+                : 'Maghrib · waktu berbuka'}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Detailed Prayer List with Per-Prayer Reminder Bell */}
       <div className="glass-card divide-y divide-[#EEF2F6] overflow-hidden">
         {prayerDetails.map((item) => {
           const isNext = item.id === nextId
           const isObligatory = OBLIGATORY_IDS.has(item.id)
-          const prayerKey = item.id as MandatoryPrayerKey
-          const bellOn = isObligatory && reminderSettings.enabled && reminderSettings.prayers[prayerKey]
+          const isRamadanImsak = includeImsak && item.id === 'imsak'
+          const hasBell = isObligatory || isRamadanImsak
+          const reminderId = item.id as ReminderPrayerId
+          const bellOn =
+            hasBell &&
+            reminderSettings.enabled &&
+            (isRamadanImsak
+              ? Boolean(reminderSettings.imsak)
+              : Boolean(reminderSettings.prayers[item.id as MandatoryPrayerKey]))
 
           return (
             <div
@@ -132,6 +187,16 @@ export const PrayerView: React.FC<PrayerViewProps> = ({
                       Berikutnya
                     </span>
                   )}
+                  {isRamadanImsak && (
+                    <span className="px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#0F50BD] text-[11px] font-bold">
+                      Sahur
+                    </span>
+                  )}
+                  {ramadan?.isActive && item.id === 'maghrib' && (
+                    <span className="px-2 py-0.5 rounded-full bg-[#F0FDFA] text-[#0F766E] text-[11px] font-bold">
+                      Berbuka
+                    </span>
+                  )}
                   {item.forbidden && (
                     <span className="px-2 py-0.5 rounded-md bg-red-50 border border-red-200 text-red-700 text-[11px] font-semibold">
                       Larangan Sholat
@@ -149,10 +214,10 @@ export const PrayerView: React.FC<PrayerViewProps> = ({
                 >
                   {item.time}
                 </div>
-                {isObligatory && (
+                {hasBell && (
                   <button
                     type="button"
-                    onClick={() => onTogglePrayerReminder(prayerKey)}
+                    onClick={() => onTogglePrayerReminder(reminderId)}
                     aria-pressed={bellOn}
                     aria-label={
                       bellOn ? `Matikan pengingat ${item.name}` : `Aktifkan pengingat ${item.name}`
@@ -197,7 +262,7 @@ export const PrayerView: React.FC<PrayerViewProps> = ({
               <h2 className="text-sm font-bold text-[#101828]">Pengingat Waktu Sholat</h2>
               <p className="text-xs text-[#475467] mt-0.5 truncate">
                 {isMasterActive
-                  ? `${activeCount} dari 5 waktu aktif · ${formatLeadLabel(reminderSettings.leadMinutes)}`
+                  ? `${activeCount} dari ${totalReminderSlots} waktu aktif · ${formatLeadLabel(reminderSettings.leadMinutes)}`
                   : 'Ketuk tombol atau ikon lonceng di jadwal'}
               </p>
             </div>

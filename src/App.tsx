@@ -47,6 +47,7 @@ import {
   NotificationPermissionState,
   PrayerReminderSettings,
   ReminderLeadMinutes,
+  ReminderPrayerId,
   countActiveReminderPrayers,
   dispatchBrowserNotification,
   findDuePrayerReminders,
@@ -59,6 +60,13 @@ import {
   saveFiredReminderKeys,
   saveReminderSettings,
 } from './services/reminderService'
+import {
+  RAMADAN_AMAL_SUGGESTIONS,
+  RAMADAN_PREVIEW_STORAGE_KEY,
+  RamadanAmalSuggestion,
+  buildRamadanContext,
+  computeRamadanPhase,
+} from './utils/ramadan'
 import { BellRing, X } from 'lucide-react'
 
 interface BeforeInstallPromptEvent extends Event {
@@ -134,6 +142,7 @@ export default function App() {
     message: string
     showAction?: boolean
   } | null>(null)
+  const [ramadanPreview, setRamadanPreview] = useState<boolean>(false)
 
   const hasAutoLocatedRef = useRef<boolean>(false)
   const prevTodayIsoRef = useRef<string>(todayIso)
@@ -165,6 +174,9 @@ export default function App() {
 
       const storedLogs = localStorage.getItem(DAILY_LOGS_STORAGE_KEY)
       if (storedLogs) setDailyLogs(JSON.parse(storedLogs))
+
+      const storedRamadanPreview = localStorage.getItem(RAMADAN_PREVIEW_STORAGE_KEY)
+      if (storedRamadanPreview === 'true') setRamadanPreview(true)
 
       setReminderSettings(loadReminderSettings())
       setNotificationPermission(getNotificationPermission())
@@ -362,8 +374,33 @@ export default function App() {
     }))
   }
 
-  // Mode Ramadan aktif otomatis saat bulan Hijriah = 9 (Ramadan) dari MABIMS
-  const isRamadan = hijriData?.today?.month === 9
+  // Mode Ramadan: aktif otomatis saat bulan Hijriah = 9 (Ramadan) dari MABIMS, atau lewat Pratinjau di Atur
+  const ramadan = useMemo(
+    () =>
+      buildRamadanContext(
+        hijriData?.today?.month,
+        hijriData?.today?.day,
+        hijriData?.monthCount,
+        ramadanPreview
+      ),
+    [hijriData?.today?.month, hijriData?.today?.day, hijriData?.monthCount, ramadanPreview]
+  )
+  const isRamadan = ramadan.isActive
+
+  const ramadanPhase = useMemo(
+    () =>
+      ramadan.isActive && prayerSchedule
+        ? computeRamadanPhase(prayerSchedule.timings, prayerSchedule.timeZone, new Date())
+        : null,
+    [ramadan.isActive, prayerSchedule]
+  )
+
+  const ramadanSuggestions = useMemo(() => {
+    if (!ramadan.isActive) return []
+    return RAMADAN_AMAL_SUGGESTIONS.filter(
+      (s) => !customAmalItems.some((item) => s.matchPattern.test(item.name))
+    )
+  }, [ramadan.isActive, customAmalItems])
 
   const todayLog = dailyLogs[todayIso] || {}
   const activeChecklistLog = dailyLogs[selectedChecklistDate] || {}
@@ -799,7 +836,8 @@ export default function App() {
       prayerSchedule,
       reminderSettings,
       firedReminderKeysRef.current,
-      now
+      now,
+      ramadan.isActive
     )
     if (dueList.length === 0) return
 
@@ -812,7 +850,7 @@ export default function App() {
       void dispatchBrowserNotification(item.title, item.body, item.firedKey)
     }
     saveFiredReminderKeys(firedReminderKeysRef.current)
-  }, [isHydrated, prayerSchedule, reminderSettings, showInAppReminderAlert])
+  }, [isHydrated, prayerSchedule, reminderSettings, ramadan.isActive, showInAppReminderAlert])
 
   const updateReminderSettings = (next: PrayerReminderSettings) => {
     setReminderSettings(next)
@@ -820,7 +858,7 @@ export default function App() {
   }
 
   const handleToggleMasterReminder = async (fromHero = false) => {
-    const activeCount = countActiveReminderPrayers(reminderSettings)
+    const activeCount = countActiveReminderPrayers(reminderSettings, ramadan.isActive)
     const currentlyActive = reminderSettings.enabled && activeCount > 0
 
     if (currentlyActive) {
@@ -830,12 +868,6 @@ export default function App() {
       }
       return
     }
-
-    let perm = getNotificationPermission()
-    if (perm === 'default') {
-      perm = await requestNotificationPermission()
-    }
-    setNotificationPermission(perm)
 
     const nextPrayers =
       activeCount > 0
@@ -848,8 +880,9 @@ export default function App() {
     }
     updateReminderSettings(nextSettings)
 
+    const initialPerm = getNotificationPermission()
     if (fromHero) {
-      if (perm === 'denied') {
+      if (initialPerm === 'denied') {
         showQuickReminderToast('Pengingat dalam app aktif (izin notifikasi browser diblokir)', true)
       } else {
         showQuickReminderToast(
@@ -858,23 +891,54 @@ export default function App() {
         )
       }
     }
+
+    if (initialPerm === 'default') {
+      const perm = await requestNotificationPermission()
+      setNotificationPermission(perm)
+      if (fromHero && perm === 'denied') {
+        showQuickReminderToast('Pengingat dalam app aktif (izin notifikasi browser diblokir)', true)
+      }
+    } else {
+      setNotificationPermission(initialPerm)
+    }
   }
 
-  const handleTogglePrayerReminder = async (prayerId: MandatoryPrayerKey) => {
+  const handleTogglePrayerReminder = async (prayerId: ReminderPrayerId) => {
     if (!reminderSettings.enabled) {
-      let perm = getNotificationPermission()
-      if (perm === 'default') {
-        perm = await requestNotificationPermission()
+      if (prayerId === 'imsak') {
+        updateReminderSettings({
+          ...reminderSettings,
+          enabled: true,
+          imsak: true,
+        })
+      } else {
+        updateReminderSettings({
+          ...reminderSettings,
+          enabled: true,
+          prayers: {
+            ...reminderSettings.prayers,
+            [prayerId]: true,
+          },
+        })
       }
-      setNotificationPermission(perm)
 
+      const initialPerm = getNotificationPermission()
+      if (initialPerm === 'default') {
+        const perm = await requestNotificationPermission()
+        setNotificationPermission(perm)
+      } else {
+        setNotificationPermission(initialPerm)
+      }
+      return
+    }
+
+    if (prayerId === 'imsak') {
+      const nextImsak = !reminderSettings.imsak
+      const anyLeft = nextImsak || Object.values(reminderSettings.prayers).some(Boolean)
       updateReminderSettings({
         ...reminderSettings,
-        enabled: true,
-        prayers: {
-          ...reminderSettings.prayers,
-          [prayerId]: true,
-        },
+        enabled: anyLeft,
+        imsak: nextImsak,
       })
       return
     }
@@ -883,7 +947,8 @@ export default function App() {
       ...reminderSettings.prayers,
       [prayerId]: !reminderSettings.prayers[prayerId],
     }
-    const anyLeft = Object.values(nextPrayers).some(Boolean)
+    const anyLeft =
+      Object.values(nextPrayers).some(Boolean) || (ramadan.isActive && reminderSettings.imsak)
     updateReminderSettings({
       ...reminderSettings,
       enabled: anyLeft,
@@ -919,7 +984,34 @@ export default function App() {
     await dispatchBrowserNotification(title, body, `mizany_test_${Date.now()}`)
   }
 
-  const reminderActiveCount = countActiveReminderPrayers(reminderSettings)
+  const handleToggleRamadanPreview = () => {
+    setRamadanPreview((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem(RAMADAN_PREVIEW_STORAGE_KEY, String(next))
+      } catch {}
+      return next
+    })
+  }
+
+  const handleQuickAddRamadanAmal = (suggestion: RamadanAmalSuggestion) => {
+    if (customAmalItems.some((item) => suggestion.matchPattern.test(item.name))) return
+    const newItem: AmalItem = {
+      id: `custom_${Date.now()}_${suggestion.key}`,
+      name: suggestion.name,
+      type: suggestion.type,
+      icon: suggestion.icon,
+      isCustom: true,
+    }
+    const updated = [...customAmalItems, newItem]
+    setCustomAmalItems(updated)
+    try {
+      localStorage.setItem('mizany_custom_amal', JSON.stringify(updated))
+    } catch {}
+    showQuickReminderToast(`${suggestion.name} ditambahkan ke checklist`)
+  }
+
+  const reminderActiveCount = countActiveReminderPrayers(reminderSettings, ramadan.isActive)
 
   return (
     <div className="min-h-screen bg-transparent relative">
@@ -1000,6 +1092,8 @@ export default function App() {
                   prayerLoadFailed={prayerLoadFailed}
                   reminderEnabled={reminderSettings.enabled}
                   reminderActiveCount={reminderActiveCount}
+                  ramadan={ramadan}
+                  ramadanPhase={ramadanPhase}
                   onToggleReminder={() => void handleToggleMasterReminder(true)}
                   onRetryPrayer={() => setPrayerRetryTick((t) => t + 1)}
                   onOpenPrayerDetail={() => setActiveTab('prayer')}
@@ -1024,6 +1118,9 @@ export default function App() {
                   items={hydratedItems}
                   selectedDateIso={selectedChecklistDate}
                   todayIso={todayIso}
+                  ramadan={ramadan}
+                  ramadanSuggestions={ramadanSuggestions}
+                  onQuickAddRamadanAmal={handleQuickAddRamadanAmal}
                   onChangeDate={setSelectedChecklistDate}
                   onTogglePrayer={handleTogglePrayer}
                   onToggleCheck={handleToggleCheck}
@@ -1043,6 +1140,7 @@ export default function App() {
                 last7Pages={last7TilawahPages}
                 hijriDateLabel={hijriData?.formattedDate}
                 linkedAmalName={linkedQuranAmal?.name}
+                ramadan={ramadan}
                 onChangePagesToday={handleChangeQuranPages}
                 onChangeDailyTarget={handleChangeTilawahTarget}
                 onAddToChecklist={handleAddQuranToChecklist}
@@ -1076,6 +1174,8 @@ export default function App() {
                 onToggleMasterReminder={() => void handleToggleMasterReminder(false)}
                 onChangeReminderLead={handleChangeReminderLead}
                 onOpenPrayerReminders={() => setActiveTab('prayer')}
+                ramadan={ramadan}
+                onToggleRamadanPreview={handleToggleRamadanPreview}
                 tilawahTarget={effectiveQuranTarget}
                 onChangeTilawahTarget={handleChangeTilawahTarget}
                 customAmalItems={customAmalItems}
@@ -1096,6 +1196,8 @@ export default function App() {
                 prayerSchedule={prayerSchedule}
                 reminderSettings={reminderSettings}
                 notificationPermission={notificationPermission}
+                ramadan={ramadan}
+                ramadanPhase={ramadanPhase}
                 onToggleMasterReminder={() => void handleToggleMasterReminder(false)}
                 onTogglePrayerReminder={(id) => void handleTogglePrayerReminder(id)}
                 onChangeLeadMinutes={handleChangeReminderLead}

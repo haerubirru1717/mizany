@@ -23,10 +23,15 @@ import {
   Star,
 } from 'lucide-react'
 
+import type { RamadanAmalSuggestion, RamadanContext } from '../utils/ramadan'
+
 interface AmalChecklistProps {
   items: AmalItem[]
   selectedDateIso: string
   todayIso: string
+  ramadan?: RamadanContext
+  ramadanSuggestions?: RamadanAmalSuggestion[]
+  onQuickAddRamadanAmal?: (suggestion: RamadanAmalSuggestion) => void
   onChangeDate: (nextIso: string) => void
   onTogglePrayer: (prayer: MandatoryPrayerKey) => void
   onToggleCheck: (id: string) => void
@@ -109,6 +114,9 @@ export const AmalChecklist: React.FC<AmalChecklistProps> = ({
   items,
   selectedDateIso,
   todayIso,
+  ramadan,
+  ramadanSuggestions,
+  onQuickAddRamadanAmal,
   onChangeDate,
   onTogglePrayer,
   onToggleCheck,
@@ -626,6 +634,41 @@ export const AmalChecklist: React.FC<AmalChecklistProps> = ({
           )
         })}
       </div>
+
+      {/* One-tap Ramadan Amal Suggestions (only shown in Mode Ramadan when unadded suggestions remain) */}
+      {ramadan?.isActive &&
+        ramadanSuggestions &&
+        ramadanSuggestions.length > 0 &&
+        onQuickAddRamadanAmal && (
+          <div className="px-4 py-3 border-t border-[#EEF2F6] bg-[#F5F9FF]/70">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0F50BD]">
+                <Moon size={13} aria-hidden="true" />
+                <span>
+                  {ramadan.isLastTenNights ? 'Amalan 10 Malam Terakhir' : 'Saran Amal Ramadan'}
+                </span>
+              </div>
+              <span className="text-[11px] font-medium text-[#475467]">Ketuk untuk tambah</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {ramadanSuggestions.map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => onQuickAddRamadanAmal(s)}
+                  className={`min-h-[34px] px-3 py-1.5 rounded-full border text-xs font-bold inline-flex items-center gap-1 active:scale-95 transition-all cursor-pointer ${
+                    s.highlightLastTen && ramadan.isLastTenNights
+                      ? 'bg-[#0F50BD] border-[#0F50BD] text-white hover:bg-[#1941B5]'
+                      : 'bg-white border-[#BFDBFE] text-[#0F50BD] hover:bg-[#EFF6FF]'
+                  }`}
+                >
+                  <Plus size={12} strokeWidth={2.8} aria-hidden="true" />
+                  <span>{s.shortLabel}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
       {/* Add Custom Deed Footer Action */}
       <div className="px-4 py-3 border-t border-[#EEF2F6] bg-[#F8FAFC]">

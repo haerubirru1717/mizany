@@ -4,15 +4,18 @@ import { getClockInTimezone, toSeconds, type PrayerSchedule } from './prayerServ
 export type ReminderLeadMinutes = 0 | 5 | 10 | 15
 export type NotificationPermissionState = 'granted' | 'denied' | 'default' | 'unsupported'
 
+export type ReminderPrayerId = MandatoryPrayerKey | 'imsak'
+
 export interface PrayerReminderSettings {
   enabled: boolean
   leadMinutes: ReminderLeadMinutes
   sound: boolean
+  imsak: boolean
   prayers: Record<MandatoryPrayerKey, boolean>
 }
 
 export interface DuePrayerReminder {
-  prayerId: MandatoryPrayerKey
+  prayerId: ReminderPrayerId
   prayerName: string
   prayerTime: string
   leadMinutes: ReminderLeadMinutes
@@ -44,6 +47,7 @@ export const DEFAULT_REMINDER_SETTINGS: PrayerReminderSettings = {
   enabled: false,
   leadMinutes: 0,
   sound: true,
+  imsak: false,
   prayers: {
     subuh: true,
     dzuhur: true,
@@ -68,6 +72,7 @@ export function loadReminderSettings(): PrayerReminderSettings {
       enabled: Boolean(parsed?.enabled),
       leadMinutes: lead,
       sound: parsed?.sound === undefined ? true : Boolean(parsed.sound),
+      imsak: Boolean(parsed?.imsak),
       prayers: {
         subuh: parsed?.prayers?.subuh !== false,
         dzuhur: parsed?.prayers?.dzuhur !== false,
@@ -87,8 +92,12 @@ export function saveReminderSettings(settings: PrayerReminderSettings): void {
   } catch {}
 }
 
-export function countActiveReminderPrayers(settings: PrayerReminderSettings): number {
-  return REMINDER_PRAYER_META.filter((p) => settings.prayers[p.id]).length
+export function countActiveReminderPrayers(
+  settings: PrayerReminderSettings,
+  includeImsak = false
+): number {
+  const wajib = REMINDER_PRAYER_META.filter((p) => settings.prayers[p.id]).length
+  return wajib + (includeImsak && settings.imsak ? 1 : 0)
 }
 
 export function formatLeadLabel(leadMinutes: ReminderLeadMinutes): string {
@@ -143,7 +152,8 @@ export function findDuePrayerReminders(
   schedule: Pick<PrayerSchedule, 'timings' | 'timeZone' | 'tzLabel' | 'city'>,
   settings: PrayerReminderSettings,
   firedKeys: ReadonlySet<string>,
-  now: Date = new Date()
+  now: Date = new Date(),
+  includeImsak = false
 ): DuePrayerReminder[] {
   if (!settings.enabled) return []
 
@@ -151,8 +161,19 @@ export function findDuePrayerReminders(
   const currentSec = clock.totalSeconds
   const due: DuePrayerReminder[] = []
 
-  for (const prayer of REMINDER_PRAYER_META) {
-    if (!settings.prayers[prayer.id]) continue
+  const candidates: { id: ReminderPrayerId; name: string; enabled: boolean }[] = [
+    ...(includeImsak
+      ? [{ id: 'imsak' as const, name: 'Imsak', enabled: Boolean(settings.imsak) }]
+      : []),
+    ...REMINDER_PRAYER_META.map((p) => ({
+      id: p.id as ReminderPrayerId,
+      name: p.name,
+      enabled: Boolean(settings.prayers[p.id]),
+    })),
+  ]
+
+  for (const prayer of candidates) {
+    if (!prayer.enabled) continue
     const prayerTime = schedule.timings[prayer.id]
     if (!prayerTime || !/^\d{2}:\d{2}/.test(prayerTime)) continue
 
@@ -163,12 +184,16 @@ export function findDuePrayerReminders(
       const firedKey = `${clock.dateIso}_${prayer.id}_${settings.leadMinutes}`
       if (firedKeys.has(firedKey)) continue
 
+      const isImsak = prayer.id === 'imsak'
       const title =
         settings.leadMinutes === 0
           ? `Waktu ${prayer.name} telah tiba`
           : `${settings.leadMinutes} menit menuju ${prayer.name}`
-      const body =
-        settings.leadMinutes === 0
+      const body = isImsak
+        ? settings.leadMinutes === 0
+          ? `Pukul ${prayerTime} ${schedule.tzLabel} · ${schedule.city}. Sebentar lagi Subuh, bersiap menahan puasa.`
+          : `Jadwal Imsak pukul ${prayerTime} ${schedule.tzLabel} · ${schedule.city}. Selesaikan sahur dengan tenang.`
+        : settings.leadMinutes === 0
           ? `Pukul ${prayerTime} ${schedule.tzLabel} · ${schedule.city}. Mari tunaikan sholat ${prayer.name}.`
           : `Jadwal ${prayer.name} pukul ${prayerTime} ${schedule.tzLabel} · ${schedule.city}. Mari bersiap mengambil wudhu.`
 

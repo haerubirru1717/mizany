@@ -20,6 +20,7 @@ import {
   BellRing,
   BellOff,
   ChevronRight,
+  Moon,
 } from 'lucide-react'
 import {
   NotificationPermissionState,
@@ -29,6 +30,7 @@ import {
   countActiveReminderPrayers,
   formatLeadLabel,
 } from '../services/reminderService'
+import type { RamadanContext } from '../utils/ramadan'
 
 interface AturViewProps {
   city: string
@@ -43,6 +45,8 @@ interface AturViewProps {
   onToggleMasterReminder: () => void
   onChangeReminderLead: (minutes: ReminderLeadMinutes) => void
   onOpenPrayerReminders: () => void
+  ramadan: RamadanContext
+  onToggleRamadanPreview: () => void
   tilawahTarget: number
   onChangeTilawahTarget: (newTarget: number) => void
   customAmalItems: AmalItem[]
@@ -94,6 +98,8 @@ export const AturView: React.FC<AturViewProps> = ({
   onToggleMasterReminder,
   onChangeReminderLead,
   onOpenPrayerReminders,
+  ramadan,
+  onToggleRamadanPreview,
   tilawahTarget,
   onChangeTilawahTarget,
   customAmalItems,
@@ -282,7 +288,7 @@ export const AturView: React.FC<AturViewProps> = ({
 
       {/* 1b. Pengingat Waktu Sholat */}
       {(() => {
-        const activeCount = countActiveReminderPrayers(reminderSettings)
+        const activeCount = countActiveReminderPrayers(reminderSettings, ramadan.isActive)
         const isReminderActive = reminderSettings.enabled && activeCount > 0
         return (
           <section className="glass-card p-4 sm:p-5 space-y-3.5">
@@ -371,6 +377,67 @@ export const AturView: React.FC<AturViewProps> = ({
           </section>
         )
       })()}
+
+      {/* 1c. Mode Ramadan */}
+      <section className="glass-card p-4 sm:p-5 space-y-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                ramadan.isActive
+                  ? 'bg-[#EFF6FF] text-[#0F50BD]'
+                  : 'bg-[#F1F5F9] text-[#475467]'
+              }`}
+            >
+              <Moon size={18} aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h2 className="text-sm font-bold text-[#101828]">Mode Ramadan</h2>
+                {ramadan.isRealRamadan ? (
+                  <span className="px-2 py-0.5 rounded-full bg-[#F0FDFA] text-[#0F766E] text-[11px] font-bold">
+                    Aktif Otomatis
+                  </span>
+                ) : ramadan.isPreview ? (
+                  <span className="px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#0F50BD] text-[11px] font-bold">
+                    Pratinjau
+                  </span>
+                ) : null}
+              </div>
+              <p className="text-xs text-[#475467] mt-0.5">
+                {ramadan.isRealRamadan
+                  ? `Ramadan Hari ke-${ramadan.dayOfRamadan} dari ${ramadan.totalDays} hari`
+                  : ramadan.isPreview
+                    ? 'Aktif sementara untuk pratinjau di luar bulan Ramadan'
+                    : 'Aktif otomatis saat masuk bulan Ramadan (Hijriah)'}
+              </p>
+            </div>
+          </div>
+
+          {!ramadan.isRealRamadan && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={ramadan.isPreview}
+              aria-label="Aktifkan pratinjau Mode Ramadan"
+              onClick={onToggleRamadanPreview}
+              className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F50BD]/40 ${
+                ramadan.isPreview ? 'bg-[#0F50BD]' : 'bg-[#CBD5E1]'
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                  ramadan.isPreview ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          )}
+        </div>
+
+        <p className="text-xs text-[#475467] leading-relaxed pt-2 border-t border-[#EEF2F6]">
+          Menampilkan sorotan Imsak &amp; Berbuka, checklist Puasa Ramadan, saran amal Ramadan, pengingat Imsak, dan kalkulator khatam 30 hari.
+        </p>
+      </section>
 
       {/* 2. Pasang Aplikasi (PWA) */}
       {!isPwaInstalled && (canInstallPwa || isIosBrowser) && (
