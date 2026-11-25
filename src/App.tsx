@@ -42,6 +42,24 @@ import {
   linkedEntryToPages,
   pagesToLinkedEntry,
 } from './utils/recapStats'
+import {
+  DEFAULT_REMINDER_SETTINGS,
+  NotificationPermissionState,
+  PrayerReminderSettings,
+  ReminderLeadMinutes,
+  countActiveReminderPrayers,
+  dispatchBrowserNotification,
+  findDuePrayerReminders,
+  formatLeadLabel,
+  getNotificationPermission,
+  loadFiredReminderKeys,
+  loadReminderSettings,
+  playGentleReminderChime,
+  requestNotificationPermission,
+  saveFiredReminderKeys,
+  saveReminderSettings,
+} from './services/reminderService'
+import { BellRing, X } from 'lucide-react'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -102,8 +120,27 @@ export default function App() {
   const [editingAmal, setEditingAmal] = useState<AmalItem | null>(null)
   const [showStreakModal, setShowStreakModal] = useState<boolean>(false)
 
+  // Prayer Reminder state
+  const [reminderSettings, setReminderSettings] = useState<PrayerReminderSettings>(
+    DEFAULT_REMINDER_SETTINGS
+  )
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermissionState>(() => getNotificationPermission())
+  const [activeReminderAlert, setActiveReminderAlert] = useState<{
+    title: string
+    body: string
+  } | null>(null)
+  const [reminderToast, setReminderToast] = useState<{
+    message: string
+    showAction?: boolean
+  } | null>(null)
+
   const hasAutoLocatedRef = useRef<boolean>(false)
   const prevTodayIsoRef = useRef<string>(todayIso)
+  const firedReminderDateRef = useRef<string>('')
+  const firedReminderKeysRef = useRef<Set<string>>(new Set())
+  const reminderAlertTimerRef = useRef<number | null>(null)
+  const reminderToastTimerRef = useRef<number | null>(null)
 
   // Initialize persisted settings & real daily logs from localStorage
   useEffect(() => {
@@ -128,6 +165,9 @@ export default function App() {
 
       const storedLogs = localStorage.getItem(DAILY_LOGS_STORAGE_KEY)
       if (storedLogs) setDailyLogs(JSON.parse(storedLogs))
+
+      setReminderSettings(loadReminderSettings())
+      setNotificationPermission(getNotificationPermission())
     } catch {
       // Ignore storage errors in sandbox
     } finally {
@@ -709,6 +749,178 @@ export default function App() {
     setTimeout(() => scrollToSection('checklist-section'), 80)
   }
 
+  const showQuickReminderToast = useCallback((message: string, showAction = false) => {
+    setReminderToast({ message, showAction })
+    if (reminderToastTimerRef.current) {
+      window.clearTimeout(reminderToastTimerRef.current)
+    }
+    reminderToastTimerRef.current = window.setTimeout(() => {
+      setReminderToast(null)
+    }, 4500)
+  }, [])
+
+  const showInAppReminderAlert = useCallback((title: string, body: string) => {
+    setActiveReminderAlert({ title, body })
+    if (reminderAlertTimerRef.current) {
+      window.clearTimeout(reminderAlertTimerRef.current)
+    }
+    reminderAlertTimerRef.current = window.setTimeout(() => {
+      setActiveReminderAlert(null)
+    }, 12000)
+  }, [])
+
+  // Keep Notification permission state synced if user changes it in browser settings
+  useEffect(() => {
+    const syncPermission = () => setNotificationPermission(getNotificationPermission())
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') syncPermission()
+    }
+    window.addEventListener('focus', syncPermission)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('focus', syncPermission)
+      document.removeEventListener('visibilitychange', onVisibility)
+      if (reminderAlertTimerRef.current) window.clearTimeout(reminderAlertTimerRef.current)
+      if (reminderToastTimerRef.current) window.clearTimeout(reminderToastTimerRef.current)
+    }
+  }, [])
+
+  // Evaluate due prayer reminders on every live prayer schedule tick (1s)
+  useEffect(() => {
+    if (!isHydrated || !prayerSchedule || !reminderSettings.enabled) return
+    const now = new Date()
+    const tzDateIso = getDateIsoInTimezone(now, prayerSchedule.timeZone)
+    if (firedReminderDateRef.current !== tzDateIso) {
+      firedReminderDateRef.current = tzDateIso
+      firedReminderKeysRef.current = loadFiredReminderKeys(tzDateIso)
+    }
+
+    const dueList = findDuePrayerReminders(
+      prayerSchedule,
+      reminderSettings,
+      firedReminderKeysRef.current,
+      now
+    )
+    if (dueList.length === 0) return
+
+    for (const item of dueList) {
+      firedReminderKeysRef.current.add(item.firedKey)
+      showInAppReminderAlert(item.title, item.body)
+      if (reminderSettings.sound) {
+        playGentleReminderChime()
+      }
+      void dispatchBrowserNotification(item.title, item.body, item.firedKey)
+    }
+    saveFiredReminderKeys(firedReminderKeysRef.current)
+  }, [isHydrated, prayerSchedule, reminderSettings, showInAppReminderAlert])
+
+  const updateReminderSettings = (next: PrayerReminderSettings) => {
+    setReminderSettings(next)
+    saveReminderSettings(next)
+  }
+
+  const handleToggleMasterReminder = async (fromHero = false) => {
+    const activeCount = countActiveReminderPrayers(reminderSettings)
+    const currentlyActive = reminderSettings.enabled && activeCount > 0
+
+    if (currentlyActive) {
+      updateReminderSettings({ ...reminderSettings, enabled: false })
+      if (fromHero) {
+        showQuickReminderToast('Pengingat sholat dimatikan')
+      }
+      return
+    }
+
+    let perm = getNotificationPermission()
+    if (perm === 'default') {
+      perm = await requestNotificationPermission()
+    }
+    setNotificationPermission(perm)
+
+    const nextPrayers =
+      activeCount > 0
+        ? reminderSettings.prayers
+        : { subuh: true, dzuhur: true, ashar: true, maghrib: true, isya: true }
+    const nextSettings: PrayerReminderSettings = {
+      ...reminderSettings,
+      enabled: true,
+      prayers: nextPrayers,
+    }
+    updateReminderSettings(nextSettings)
+
+    if (fromHero) {
+      if (perm === 'denied') {
+        showQuickReminderToast('Pengingat dalam app aktif (izin notifikasi browser diblokir)', true)
+      } else {
+        showQuickReminderToast(
+          `Pengingat aktif · ${formatLeadLabel(nextSettings.leadMinutes)}`,
+          true
+        )
+      }
+    }
+  }
+
+  const handleTogglePrayerReminder = async (prayerId: MandatoryPrayerKey) => {
+    if (!reminderSettings.enabled) {
+      let perm = getNotificationPermission()
+      if (perm === 'default') {
+        perm = await requestNotificationPermission()
+      }
+      setNotificationPermission(perm)
+
+      updateReminderSettings({
+        ...reminderSettings,
+        enabled: true,
+        prayers: {
+          ...reminderSettings.prayers,
+          [prayerId]: true,
+        },
+      })
+      return
+    }
+
+    const nextPrayers = {
+      ...reminderSettings.prayers,
+      [prayerId]: !reminderSettings.prayers[prayerId],
+    }
+    const anyLeft = Object.values(nextPrayers).some(Boolean)
+    updateReminderSettings({
+      ...reminderSettings,
+      enabled: anyLeft,
+      prayers: nextPrayers,
+    })
+  }
+
+  const handleChangeReminderLead = (leadMinutes: ReminderLeadMinutes) => {
+    updateReminderSettings({ ...reminderSettings, leadMinutes })
+  }
+
+  const handleToggleReminderSound = () => {
+    updateReminderSettings({ ...reminderSettings, sound: !reminderSettings.sound })
+  }
+
+  const handleTestReminder = async () => {
+    let perm = getNotificationPermission()
+    if (perm === 'default') {
+      perm = await requestNotificationPermission()
+    }
+    setNotificationPermission(perm)
+
+    const nextName = prayerSchedule?.nextPrayer?.name || 'Sholat'
+    const nextTime = prayerSchedule?.nextPrayer?.time || '--:--'
+    const tz = prayerSchedule?.tzLabel || 'WIB'
+    const title = `Uji Pengingat · ${nextName}`
+    const body = `Jadwal ${nextName} pukul ${nextTime} ${tz} · ${city}. Pengingat Mizany siap digunakan.`
+
+    showInAppReminderAlert(title, body)
+    if (reminderSettings.sound) {
+      playGentleReminderChime()
+    }
+    await dispatchBrowserNotification(title, body, `mizany_test_${Date.now()}`)
+  }
+
+  const reminderActiveCount = countActiveReminderPrayers(reminderSettings)
+
   return (
     <div className="min-h-screen bg-transparent relative">
       {/* Onboarding Overlay */}
@@ -734,6 +946,35 @@ export default function App() {
         onClose={() => setShowStreakModal(false)}
       />
 
+      {/* In-app Prayer Reminder Alert Banner */}
+      {activeReminderAlert && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed top-[calc(12px+env(safe-area-inset-top))] inset-x-0 z-50 px-4 pointer-events-none"
+        >
+          <div className="max-w-md mx-auto pointer-events-auto rounded-2xl bg-gradient-to-r from-[#0F50BD] to-[#1941B5] text-white p-4 shadow-[0_12px_32px_rgba(15,80,189,0.35)] border border-white/20 flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-white/18 border border-white/25 flex items-center justify-center shrink-0">
+              <BellRing size={18} className="text-[#5EEAD4]" aria-hidden="true" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold leading-snug">{activeReminderAlert.title}</div>
+              <p className="text-xs text-[#DBEAFE] mt-0.5 leading-relaxed">
+                {activeReminderAlert.body}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveReminderAlert(null)}
+              aria-label="Tutup pengingat sholat"
+              className="w-8 h-8 rounded-lg hover:bg-white/15 flex items-center justify-center shrink-0 cursor-pointer"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Full-Screen Tasbih Canvas (mounted outside .view-enter transform so fixed inset-0 covers 100% viewport) */}
       {!showOnboarding && activeTab === 'tasbih' && <TasbihView onBack={() => setActiveTab('beranda')} />}
 
@@ -757,6 +998,9 @@ export default function App() {
                   remainingTime={prayerSchedule?.nextPrayer?.remaining}
                   hijriData={hijriData}
                   prayerLoadFailed={prayerLoadFailed}
+                  reminderEnabled={reminderSettings.enabled}
+                  reminderActiveCount={reminderActiveCount}
+                  onToggleReminder={() => void handleToggleMasterReminder(true)}
                   onRetryPrayer={() => setPrayerRetryTick((t) => t + 1)}
                   onOpenPrayerDetail={() => setActiveTab('prayer')}
                   onOpenCalendar={() => setActiveTab('kalender')}
@@ -827,6 +1071,11 @@ export default function App() {
                 locationError={locationError}
                 onDetectLocation={() => runDeviceGeolocation(true)}
                 onChangeCity={handleChangeCity}
+                reminderSettings={reminderSettings}
+                notificationPermission={notificationPermission}
+                onToggleMasterReminder={() => void handleToggleMasterReminder(false)}
+                onChangeReminderLead={handleChangeReminderLead}
+                onOpenPrayerReminders={() => setActiveTab('prayer')}
                 tilawahTarget={effectiveQuranTarget}
                 onChangeTilawahTarget={handleChangeTilawahTarget}
                 customAmalItems={customAmalItems}
@@ -845,11 +1094,45 @@ export default function App() {
               <PrayerView
                 city={city}
                 prayerSchedule={prayerSchedule}
+                reminderSettings={reminderSettings}
+                notificationPermission={notificationPermission}
+                onToggleMasterReminder={() => void handleToggleMasterReminder(false)}
+                onTogglePrayerReminder={(id) => void handleTogglePrayerReminder(id)}
+                onChangeLeadMinutes={handleChangeReminderLead}
+                onToggleReminderSound={handleToggleReminderSound}
+                onTestReminder={() => void handleTestReminder()}
                 onBack={() => setActiveTab('beranda')}
               />
             )}
           </div>
         </main>
+      )}
+
+      {/* Quick Bell Feedback Toast */}
+      {reminderToast && !showOnboarding && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] inset-x-0 z-40 px-4 pointer-events-none"
+        >
+          <div className="max-w-md mx-auto flex justify-center">
+            <div className="pointer-events-auto inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-[#101828] text-white text-xs font-semibold shadow-lg">
+              <span>{reminderToast.message}</span>
+              {reminderToast.showAction && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReminderToast(null)
+                    setActiveTab('prayer')
+                  }}
+                  className="text-[#5EEAD4] font-bold hover:underline cursor-pointer shrink-0"
+                >
+                  Atur
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Bottom Nav (hidden during Onboarding and full-screen Tasbih mode) */}

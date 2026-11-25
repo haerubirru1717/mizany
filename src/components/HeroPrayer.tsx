@@ -1,7 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { MosqueSkyline } from './MosqueSkyline'
 import { HijriHeroData, toArabicIndic } from '../services/hijriService'
-import { MapPin, Clock, ChevronRight, RotateCw, CalendarDays, RefreshCw } from 'lucide-react'
+import {
+  MapPin,
+  Clock,
+  ChevronRight,
+  RotateCw,
+  CalendarDays,
+  RefreshCw,
+  BellRing,
+  BellOff,
+} from 'lucide-react'
 
 const ARC_LENGTH = 383.27 // Exact semicircle length for r=122 (Math.PI * 122)
 
@@ -18,6 +27,9 @@ interface HeroPrayerProps {
   remainingTime?: string
   hijriData?: HijriHeroData | null
   prayerLoadFailed?: boolean
+  reminderEnabled?: boolean
+  reminderActiveCount?: number
+  onToggleReminder?: () => void
   onRetryPrayer?: () => void
   onOpenPrayerDetail?: () => void
   onOpenCalendar?: () => void
@@ -36,6 +48,9 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
   remainingTime,
   hijriData,
   prayerLoadFailed,
+  reminderEnabled = false,
+  reminderActiveCount = 0,
+  onToggleReminder,
   onRetryPrayer,
   onOpenPrayerDetail,
   onOpenCalendar,
@@ -116,7 +131,7 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
             className="absolute inset-0 z-0 w-full h-full cursor-pointer rounded-b-[28px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/80"
           />
 
-          {/* Top row: Date/Location & Hijri Flip Indicator */}
+          {/* Top row: Date/Location, Reminder Bell & Hijri Flip Indicator */}
           <div className="flex items-start justify-between gap-2 relative z-10 pointer-events-none">
             <div className="min-w-0">
               <div className="text-[15px] font-bold text-white leading-tight truncate">
@@ -132,13 +147,51 @@ export const HeroPrayer: React.FC<HeroPrayerProps> = ({
               </div>
             </div>
 
-            <span
-              aria-hidden="true"
-              className="shrink-0 min-h-[36px] px-3 py-1.5 rounded-xl bg-white/18 border border-white/30 backdrop-blur-sm text-white text-xs font-semibold inline-flex items-center gap-1.5 group-hover:bg-white/25 transition-colors"
-            >
-              <CalendarDays size={14} />
-              <span>Hijriah</span>
-            </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {onToggleReminder && (
+                <button
+                  type="button"
+                  tabIndex={isFlipped ? -1 : 0}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onToggleReminder()
+                  }}
+                  aria-pressed={reminderEnabled && reminderActiveCount > 0}
+                  aria-label={
+                    reminderEnabled && reminderActiveCount > 0
+                      ? `Pengingat sholat aktif (${reminderActiveCount} waktu). Ketuk untuk mematikan`
+                      : 'Aktifkan pengingat waktu sholat'
+                  }
+                  className={`relative z-20 min-w-[36px] min-h-[36px] rounded-xl border backdrop-blur-sm inline-flex items-center justify-center active:scale-95 transition-all cursor-pointer ${
+                    isFlipped ? 'pointer-events-none' : 'pointer-events-auto'
+                  } ${
+                    reminderEnabled && reminderActiveCount > 0
+                      ? 'bg-white/24 border-white/40 text-white hover:bg-white/30'
+                      : 'bg-white/14 border-white/25 text-[#DBEAFE] hover:bg-white/22 hover:text-white'
+                  }`}
+                >
+                  {reminderEnabled && reminderActiveCount > 0 ? (
+                    <>
+                      <BellRing size={15} strokeWidth={2.2} aria-hidden="true" />
+                      <span
+                        className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#5EEAD4]"
+                        aria-hidden="true"
+                      />
+                    </>
+                  ) : (
+                    <BellOff size={15} strokeWidth={2.1} aria-hidden="true" />
+                  )}
+                </button>
+              )}
+
+              <span
+                aria-hidden="true"
+                className="shrink-0 min-h-[36px] px-2.5 py-1.5 rounded-xl bg-white/18 border border-white/30 backdrop-blur-sm text-white text-xs font-semibold inline-flex items-center gap-1.5 group-hover:bg-white/25 transition-colors"
+              >
+                <CalendarDays size={14} />
+                <span>Hijriah</span>
+              </span>
+            </div>
           </div>
 
           {/* Mosque Skyline Horizon */}

@@ -17,7 +17,18 @@ import {
   Loader2,
   Download,
   Smartphone,
+  BellRing,
+  BellOff,
+  ChevronRight,
 } from 'lucide-react'
+import {
+  NotificationPermissionState,
+  PrayerReminderSettings,
+  REMINDER_LEAD_OPTIONS,
+  ReminderLeadMinutes,
+  countActiveReminderPrayers,
+  formatLeadLabel,
+} from '../services/reminderService'
 
 interface AturViewProps {
   city: string
@@ -27,6 +38,11 @@ interface AturViewProps {
   locationError: string | null
   onDetectLocation: () => void
   onChangeCity: (newCity: string) => void
+  reminderSettings: PrayerReminderSettings
+  notificationPermission: NotificationPermissionState
+  onToggleMasterReminder: () => void
+  onChangeReminderLead: (minutes: ReminderLeadMinutes) => void
+  onOpenPrayerReminders: () => void
   tilawahTarget: number
   onChangeTilawahTarget: (newTarget: number) => void
   customAmalItems: AmalItem[]
@@ -73,6 +89,11 @@ export const AturView: React.FC<AturViewProps> = ({
   locationError,
   onDetectLocation,
   onChangeCity,
+  reminderSettings,
+  notificationPermission,
+  onToggleMasterReminder,
+  onChangeReminderLead,
+  onOpenPrayerReminders,
   tilawahTarget,
   onChangeTilawahTarget,
   customAmalItems,
@@ -258,6 +279,98 @@ export const AturView: React.FC<AturViewProps> = ({
           </div>
         )}
       </section>
+
+      {/* 1b. Pengingat Waktu Sholat */}
+      {(() => {
+        const activeCount = countActiveReminderPrayers(reminderSettings)
+        const isReminderActive = reminderSettings.enabled && activeCount > 0
+        return (
+          <section className="glass-card p-4 sm:p-5 space-y-3.5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                    isReminderActive
+                      ? 'bg-[#EFF6FF] text-[#0F50BD]'
+                      : 'bg-[#F1F5F9] text-[#475467]'
+                  }`}
+                >
+                  {isReminderActive ? (
+                    <BellRing size={18} aria-hidden="true" />
+                  ) : (
+                    <BellOff size={18} aria-hidden="true" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-sm font-bold text-[#101828]">Pengingat Waktu Sholat</h2>
+                  <p className="text-xs text-[#475467] truncate">
+                    {isReminderActive
+                      ? `${activeCount} waktu aktif · ${formatLeadLabel(reminderSettings.leadMinutes)}`
+                      : 'Nonaktif'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isReminderActive}
+                aria-label="Aktifkan pengingat waktu sholat"
+                onClick={onToggleMasterReminder}
+                className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F50BD]/40 ${
+                  isReminderActive ? 'bg-[#0F50BD]' : 'bg-[#CBD5E1]'
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                    isReminderActive ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {notificationPermission === 'denied' && (
+              <p className="text-xs text-[#991B1B] bg-[#FEF2F2] border border-[#FECACA] rounded-xl px-3 py-2 leading-relaxed">
+                Izin notifikasi diblokir browser. Buka pengaturan situs untuk mengizinkan notifikasi.
+              </p>
+            )}
+
+            {isReminderActive && (
+              <div className="pt-3 border-t border-[#EEF2F6] space-y-2.5">
+                <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-1.5">
+                  {REMINDER_LEAD_OPTIONS.map((opt) => {
+                    const selected = reminderSettings.leadMinutes === opt.value
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => onChangeReminderLead(opt.value)}
+                        aria-pressed={selected}
+                        className={`min-h-[34px] px-2 py-1 rounded-xl text-xs font-bold whitespace-nowrap cursor-pointer transition-colors ${
+                          selected
+                            ? 'bg-[#0F50BD] text-white'
+                            : 'bg-[#F1F5F9] text-[#334155] hover:bg-[#E2E8F0]'
+                        }`}
+                      >
+                        {opt.shortLabel}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={onOpenPrayerReminders}
+              className="w-full pt-3 border-t border-[#EEF2F6] flex items-center justify-between text-xs font-bold text-[#0F50BD] hover:text-[#1941B5] cursor-pointer"
+            >
+              <span>Atur per waktu sholat &amp; uji notifikasi</span>
+              <ChevronRight size={15} aria-hidden="true" />
+            </button>
+          </section>
+        )
+      })()}
 
       {/* 2. Pasang Aplikasi (PWA) */}
       {!isPwaInstalled && (canInstallPwa || isIosBrowser) && (

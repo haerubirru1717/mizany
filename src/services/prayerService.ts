@@ -75,7 +75,7 @@ function resolveTimezoneMeta(
   return { timeZone: 'Asia/Jakarta', tzLabel: 'WIB' }
 }
 
-function getClockInTimezone(now: Date, timeZone: string) {
+export function getClockInTimezone(now: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone,
     year: 'numeric',
